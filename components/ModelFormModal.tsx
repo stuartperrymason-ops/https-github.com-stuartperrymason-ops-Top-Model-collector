@@ -1,17 +1,24 @@
+/**
+ * @file ModelFormModal.tsx
+ * @description A modal form for adding a new model or editing an existing one.
+ * It includes dynamic form fields and a feature to generate a description using the Gemini AI.
+ */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Model, Army } from '../types';
 import { generateDescription } from '../services/geminiService';
+import { addModel, updateModel } from '../services/apiService';
 import { SparklesIcon } from './icons/Icons';
 
 interface ModelFormModalProps {
-  model?: Model;
-  onClose: () => void;
+  model?: Model; // The model to edit. If undefined, the form is for adding a new model.
+  onClose: () => void; // Callback to close the modal.
 }
 
 const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
   const { state, dispatch } = useData();
+  // Form state is managed locally within this component.
   const [formData, setFormData] = useState<Omit<Model, 'id'>>({
     name: '',
     armyId: '',
@@ -22,19 +29,25 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
     status: 'unpainted',
     imageUrl: '',
   });
+  // State to hold the list of armies available for the selected game system.
   const [availableArmies, setAvailableArmies] = useState<Army[]>([]);
+  // State to track the loading status of the AI description generation.
   const [isGenerating, setIsGenerating] = useState(false);
+  // State to track submission status
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // `useEffect` to pre-populate the form when a model is passed for editing.
   useEffect(() => {
     if (model) {
       setFormData(model);
     }
   }, [model]);
   
+  // `useEffect` to update the `availableArmies` dropdown whenever the selected game system changes.
   useEffect(() => {
     if (formData.gameSystemId) {
       setAvailableArmies(state.armies.filter(a => a.gameSystemId === formData.gameSystemId));
-      // Reset army if it's not in the new list of available armies
+      // If the currently selected army doesn't belong to the new game system, reset the army selection.
       if (!state.armies.some(a => a.gameSystemId === formData.gameSystemId && a.id === formData.armyId)) {
         setFormData(f => ({ ...f, armyId: ''}));
       }
@@ -44,11 +57,14 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
     }
   }, [formData.gameSystemId, state.armies, formData.armyId]);
 
+  // A generic handler for updating form state on input changes.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    // For numeric fields, parse the value to an integer.
     setFormData(prev => ({ ...prev, [name]: name === 'points' || name === 'quantity' ? parseInt(value, 10) : value }));
   };
 
+  // Handles the AI description generation.
   const handleGenerateDescription = async () => {
       if (!formData.name || !formData.armyId || !formData.gameSystemId) {
           alert("Please fill in Name, Game System, and Army before generating a description.");
@@ -62,14 +78,27 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
       setIsGenerating(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handles form submission for both creating and updating a model.
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (model) {
-      dispatch({ type: 'UPDATE_MODEL', payload: { ...formData, id: model.id } });
-    } else {
-      dispatch({ type: 'ADD_MODEL', payload: { ...formData, id: new Date().toISOString() } });
+    setIsSubmitting(true);
+    try {
+      if (model) {
+        // If a model is being edited, call the update API service.
+        const updatedModel = await updateModel(model.id, { ...formData, id: model.id });
+        dispatch({ type: 'UPDATE_MODEL', payload: updatedModel });
+      } else {
+        // Otherwise, call the add API service.
+        const newModel = await addModel(formData);
+        dispatch({ type: 'ADD_MODEL', payload: newModel });
+      }
+      onClose(); // Close the modal after successful submission.
+    } catch (error) {
+      console.error("Failed to save model:", error);
+      alert("Failed to save model. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -114,11 +143,11 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium">Quantity</label>
-              <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
+              <input type="number" name="quantity" min="1" value={formData.quantity} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
             </div>
             <div>
               <label className="block text-sm font-medium">Points</label>
-              <input type="number" name="points" value={formData.points} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
+              <input type="number" name="points" min="0" value={formData.points} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
             </div>
             <div>
               <label className="block text-sm font-medium">Status</label>
@@ -135,8 +164,10 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
           </div>
 
           <div className="flex justify-end gap-4 pt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-indigo-500">{model ? 'Update' : 'Save'}</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700" disabled={isSubmitting}>Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-indigo-500 disabled:bg-gray-500" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : (model ? 'Update' : 'Save')}
+            </button>
           </div>
         </form>
       </div>

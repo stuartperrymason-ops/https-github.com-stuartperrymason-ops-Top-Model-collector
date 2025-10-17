@@ -1,3 +1,8 @@
+/**
+ * @file WelcomePage.tsx
+ * @description The landing page for the application.
+ * It provides a brief introduction and navigation links to the main sections.
+ */
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -13,6 +18,7 @@ const WelcomePage: React.FC = () => {
           Your digital armory for managing tabletop miniatures. Catalog your collections, track your painting progress, and organize your forces across all your favorite game systems.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
+          {/* Link components from react-router-dom are used for client-side navigation. */}
           <Link
             to="/collection"
             className="px-8 py-3 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 focus:ring-offset-background transition duration-300"
