@@ -6,12 +6,15 @@ import ModelCard from '../components/ModelCard';
 import ModelFormModal from '../components/ModelFormModal';
 import { PlusIcon } from '../components/icons/Icons';
 
+type SortByType = 'name' | 'points' | 'status';
+
 const CollectionPage: React.FC = () => {
   const { state } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<Model | undefined>(undefined);
   const [filterGameSystem, setFilterGameSystem] = useState<string>('all');
   const [filterArmy, setFilterArmy] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortByType>('name');
 
   const handleOpenModal = (model?: Model) => {
     setEditingModel(model);
@@ -31,12 +34,31 @@ const CollectionPage: React.FC = () => {
   }, [filterGameSystem, state.armies]);
 
   const filteredModels = useMemo(() => {
-    return state.models.filter(model => {
-      const gameSystemMatch = filterGameSystem === 'all' || model.gameSystemId === filterGameSystem;
-      const armyMatch = filterArmy === 'all' || model.armyId === filterArmy;
-      return gameSystemMatch && armyMatch;
-    });
-  }, [state.models, filterGameSystem, filterArmy]);
+    const statusOrder: Record<Model['status'], number> = {
+        'painted': 0,
+        'wip': 1,
+        'unpainted': 2,
+    };
+
+    return state.models
+      .filter(model => {
+        const gameSystemMatch = filterGameSystem === 'all' || model.gameSystemId === filterGameSystem;
+        const armyMatch = filterArmy === 'all' || model.armyId === filterArmy;
+        return gameSystemMatch && armyMatch;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+            case 'name':
+                return a.name.localeCompare(b.name);
+            case 'points':
+                return a.points - b.points;
+            case 'status':
+                return statusOrder[a.status] - statusOrder[b.status];
+            default:
+                return 0;
+        }
+      });
+  }, [state.models, filterGameSystem, filterArmy, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -51,8 +73,8 @@ const CollectionPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-surface p-4 rounded-lg border border-border flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
+      <div className="bg-surface p-4 rounded-lg border border-border grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
           <label htmlFor="gameSystemFilter" className="block text-sm font-medium text-text-secondary mb-1">Filter by Game System</label>
           <select
             id="gameSystemFilter"
@@ -67,7 +89,7 @@ const CollectionPage: React.FC = () => {
             {state.gameSystems.map(gs => <option key={gs.id} value={gs.id}>{gs.name}</option>)}
           </select>
         </div>
-        <div className="flex-1">
+        <div>
           <label htmlFor="armyFilter" className="block text-sm font-medium text-text-secondary mb-1">Filter by Army</label>
           <select
             id="armyFilter"
@@ -78,6 +100,19 @@ const CollectionPage: React.FC = () => {
           >
             <option value="all">All Armies</option>
             {filteredArmies.map(army => <option key={army.id} value={army.id}>{army.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="sortBy" className="block text-sm font-medium text-text-secondary mb-1">Sort by</label>
+          <select
+            id="sortBy"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortByType)}
+            className="w-full bg-background border border-border rounded-md p-2 focus:ring-primary focus:border-primary"
+          >
+            <option value="name">Name (A-Z)</option>
+            <option value="points">Points (Low to High)</option>
+            <option value="status">Status</option>
           </select>
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { GameSystem, Army, Model } from '../types';
 
@@ -36,11 +35,18 @@ const initialState: State = {
 };
 
 const dataReducer = (state: State, action: Action): State => {
-  // In a real application, these actions would trigger API calls to a MongoDB backend.
+  // In a real application with a MongoDB backend, these actions would trigger API calls.
+  // The local state would then be updated based on the API response.
+  // For now, we simulate this by logging the intended API call and updating the local state directly
+  // so the UI remains fully functional.
+  console.log('Dispatching action:', action);
+
   switch (action.type) {
     case 'ADD_GAMESYSTEM':
+      console.log(`SIMULATING API CALL: POST /api/gamesystems`, action.payload);
       return { ...state, gameSystems: [...state.gameSystems, action.payload] };
     case 'DELETE_GAMESYSTEM':
+      console.log(`SIMULATING API CALL: DELETE /api/gamesystems/${action.payload}`);
       return {
         ...state,
         gameSystems: state.gameSystems.filter(gs => gs.id !== action.payload),
@@ -48,23 +54,29 @@ const dataReducer = (state: State, action: Action): State => {
         models: state.models.filter(m => m.gameSystemId !== action.payload),
       };
     case 'ADD_ARMY':
+      console.log(`SIMULATING API CALL: POST /api/armies`, action.payload);
       return { ...state, armies: [...state.armies, action.payload] };
     case 'DELETE_ARMY':
+      console.log(`SIMULATING API CALL: DELETE /api/armies/${action.payload}`);
       return {
         ...state,
         armies: state.armies.filter(a => a.id !== action.payload),
         models: state.models.filter(m => m.armyId !== action.payload),
       };
     case 'ADD_MODEL':
+      console.log(`SIMULATING API CALL: POST /api/models`, action.payload);
       return { ...state, models: [...state.models, action.payload] };
     case 'UPDATE_MODEL':
+      console.log(`SIMULATING API CALL: PUT /api/models/${action.payload.id}`, action.payload);
       return {
         ...state,
         models: state.models.map(m => m.id === action.payload.id ? action.payload : m),
       };
     case 'DELETE_MODEL':
+      console.log(`SIMULATING API CALL: DELETE /api/models/${action.payload}`);
       return { ...state, models: state.models.filter(m => m.id !== action.payload) };
     case 'BULK_IMPORT':
+      console.log(`SIMULATING API CALL: POST /api/bulk-import`, action.payload);
       // Simple merge, could be more sophisticated (e.g., handling duplicates)
       return {
         ...state,
