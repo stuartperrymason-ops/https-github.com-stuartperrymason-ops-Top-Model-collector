@@ -1,4 +1,9 @@
-
+<!--
+ * @file index.html
+ * @description The main HTML file that serves as the entry point for the web application.
+ * It sets up the basic document structure, includes necessary external libraries like Tailwind CSS for styling
+ * and PapaParse for CSV handling, defines a dark theme, and specifies the root element for the React app.
+-->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -6,8 +11,14 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tabletop Model Collector</title>
+    <!-- Tailwind CSS for utility-first styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse for robust CSV parsing in the browser -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/papaparse/5.3.2/papaparse.min.js"></script>
+    <!--
+      Tailwind CSS configuration script.
+      This configures a dark theme with a custom color palette for a consistent look and feel.
+    -->
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -26,6 +37,12 @@
         },
       }
     </script>
+  <!--
+    Import Map for managing JavaScript modules.
+    This allows using bare module specifiers (e.g., "react") directly in the code,
+    which are then resolved to the specified URLs. This is a modern browser feature
+    that simplifies module management without a complex build step.
+  -->
   <script type="importmap">
 {
   "imports": {
@@ -39,7 +56,9 @@
 </script>
 </head>
   <body class="bg-background text-text-primary">
+    <!-- The root container where the React application will be mounted. -->
     <div id="root"></div>
+    <!-- The main script for the application, loaded as a module. -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

@@ -1,5 +1,4 @@
 {
   "name": "Tabletop Model Collector",
-  "description": "An application to store and manage information about models from various armies and tabletop gaming systems. Features include a detailed collection view, bulk CSV import/export, and settings to customize game systems and armies.",
-  "requestFramePermissions": []
+  "description": "An application to store and manage information about models from various armies and tabletop gaming systems. Features include a detailed collection view, bulk CSV import/export, and settings to customize game systems and armies."
 }

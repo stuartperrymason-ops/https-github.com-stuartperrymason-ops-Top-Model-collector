@@ -1,39 +1,76 @@
+/**
+ * @file SettingsPage.tsx
+ * @description This page allows users to manage the core data entities of the application:
+ * Game Systems and Armies. Users can add new entries or delete existing ones.
+ */
 
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { PlusIcon, TrashIcon } from '../components/icons/Icons';
 import { GameSystem, Army } from '../types';
+import { addGameSystem, deleteGameSystem, addArmy, deleteArmy } from '../services/apiService';
 
 const SettingsPage: React.FC = () => {
     const { state, dispatch } = useData();
+    // Local state to manage the input field for a new game system.
     const [newGameSystem, setNewGameSystem] = useState('');
+    // Local state to manage the input fields for a new army.
     const [newArmy, setNewArmy] = useState({ name: '', gameSystemId: '' });
 
-    const handleAddGameSystem = (e: React.FormEvent) => {
+    // Handles the form submission to add a new game system.
+    const handleAddGameSystem = async (e: React.FormEvent) => {
         e.preventDefault();
         if (newGameSystem.trim()) {
-            dispatch({ type: 'ADD_GAMESYSTEM', payload: { id: new Date().toISOString(), name: newGameSystem.trim() } });
-            setNewGameSystem('');
+            try {
+                const addedSystem = await addGameSystem({ name: newGameSystem.trim() });
+                // Dispatch an action to the global state with the new game system data from the API.
+                dispatch({ type: 'ADD_GAMESYSTEM', payload: addedSystem });
+                setNewGameSystem(''); // Reset the input field.
+            } catch (error) {
+                console.error("Failed to add game system:", error);
+                alert("Could not add game system.");
+            }
         }
     };
 
-    const handleDeleteGameSystem = (id: string) => {
+    // Handles deleting a game system, including a confirmation prompt.
+    const handleDeleteGameSystem = async (id: string) => {
         if (window.confirm('Are you sure? Deleting a game system will also delete all associated armies and models.')) {
-            dispatch({ type: 'DELETE_GAMESYSTEM', payload: id });
+            try {
+                await deleteGameSystem(id);
+                dispatch({ type: 'DELETE_GAMESYSTEM', payload: id });
+            } catch (error) {
+                console.error("Failed to delete game system:", error);
+                alert("Could not delete game system.");
+            }
         }
     };
 
-    const handleAddArmy = (e: React.FormEvent) => {
+    // Handles the form submission to add a new army.
+    const handleAddArmy = async (e: React.FormEvent) => {
         e.preventDefault();
         if (newArmy.name.trim() && newArmy.gameSystemId) {
-            dispatch({ type: 'ADD_ARMY', payload: { id: new Date().toISOString(), ...newArmy } });
-            setNewArmy({ name: '', gameSystemId: '' });
+            try {
+                const addedArmy = await addArmy({ name: newArmy.name.trim(), gameSystemId: newArmy.gameSystemId });
+                dispatch({ type: 'ADD_ARMY', payload: addedArmy });
+                setNewArmy({ name: '', gameSystemId: '' }); // Reset the form fields.
+            } catch (error) {
+                console.error("Failed to add army:", error);
+                alert("Could not add army.");
+            }
         }
     };
 
-    const handleDeleteArmy = (id: string) => {
+    // Handles deleting an army, including a confirmation prompt.
+    const handleDeleteArmy = async (id: string) => {
         if (window.confirm('Are you sure? Deleting an army will also delete all associated models.')) {
-            dispatch({ type: 'DELETE_ARMY', payload: id });
+            try {
+                await deleteArmy(id);
+                dispatch({ type: 'DELETE_ARMY', payload: id });
+            } catch (error) {
+                console.error("Failed to delete army:", error);
+                alert("Could not delete army.");
+            }
         }
     };
 
@@ -41,7 +78,7 @@ const SettingsPage: React.FC = () => {
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Settings</h1>
 
-            {/* Game Systems Management */}
+            {/* Game Systems Management Section */}
             <div className="bg-surface p-6 rounded-lg border border-border">
                 <h2 className="text-2xl font-semibold mb-4">Manage Game Systems</h2>
                 <form onSubmit={handleAddGameSystem} className="flex gap-4 mb-4">
@@ -68,7 +105,7 @@ const SettingsPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Armies Management */}
+            {/* Armies Management Section */}
             <div className="bg-surface p-6 rounded-lg border border-border">
                 <h2 className="text-2xl font-semibold mb-4">Manage Armies</h2>
                 <form onSubmit={handleAddArmy} className="flex flex-col md:flex-row gap-4 mb-4">
