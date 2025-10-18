@@ -24,7 +24,6 @@ export interface Model {
   armyId: string; // Foreign key linking to an Army
   gameSystemId: string; // Foreign key linking to a GameSystem
   description: string;
-  points: number; // Point cost in the game
   quantity: number; // How many of this model the user owns
   status: 'Purchased' | 'Printed' | 'Primed' | 'Painted' | 'Based' | 'Ready to Game'; // Painting status
   imageUrl?: string; // Optional URL for an image of the model

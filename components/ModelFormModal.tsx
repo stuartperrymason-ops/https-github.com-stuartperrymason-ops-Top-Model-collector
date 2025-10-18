@@ -23,7 +23,6 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     armyId: '',
     gameSystemId: '',
     description: '',
-    points: 0,
     quantity: 1,
     status: 'Purchased',
     imageUrl: '',
@@ -40,7 +39,6 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
         armyId: '',
         gameSystemId: '',
         description: '',
-        points: 0,
         quantity: 1,
         status: 'Purchased',
         imageUrl: '',
@@ -62,7 +60,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'points' || name === 'quantity' ? parseInt(value, 10) || 0 : value }));
+    setFormData(prev => ({ ...prev, [name]: name === 'quantity' ? parseInt(value, 10) || 0 : value }));
   };
 
   const handleGenerateDescription = async () => {
@@ -161,15 +159,9 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
             </div>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                  <label htmlFor="points" className="block text-sm font-medium text-text-secondary mb-1">Points</label>
-                  <input type="number" name="points" id="points" value={formData.points} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-              <div>
-                  <label htmlFor="quantity" className="block text-sm font-medium text-text-secondary mb-1">Quantity</label>
-                  <input type="number" name="quantity" id="quantity" value={formData.quantity} onChange={handleChange} required min="1" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
+          <div>
+              <label htmlFor="quantity" className="block text-sm font-medium text-text-secondary mb-1">Quantity</label>
+              <input type="number" name="quantity" id="quantity" value={formData.quantity} onChange={handleChange} required min="1" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
 
           <div>

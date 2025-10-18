@@ -84,7 +84,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(model.status)}`}>
                 {model.status}
             </span>
-            <span className="text-lg font-bold text-primary">{model.points} pts</span>
+            <span className="text-lg font-bold text-primary">{model.quantity}x</span>
         </div>
 
         <p className="text-sm text-text-secondary mb-4 h-20 overflow-y-auto">{model.description}</p>

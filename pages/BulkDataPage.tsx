@@ -14,7 +14,6 @@ type CsvRow = {
     name: string;
     'game system': string;
     army: string;
-    points: string;
     quantity: string;
     status: string;
 };
@@ -70,9 +69,9 @@ const BulkDataPage: React.FC = () => {
         const validStatuses: Model['status'][] = ['Purchased', 'Printed', 'Primed', 'Painted', 'Based', 'Ready to Game'];
 
         data.forEach((row, index) => {
-            const { name, 'game system': gameSystemName, army: armyName, points, quantity, status } = row;
+            const { name, 'game system': gameSystemName, army: armyName, quantity, status } = row;
             
-            if (!name || !gameSystemName || !armyName || !points || !quantity || !status) {
+            if (!name || !gameSystemName || !armyName || !quantity || !status) {
                 results.push({ row, data: null, status: 'ERROR', errorMessage: 'Row has missing data.', import: false, rowIndex: index });
                 return;
             }
@@ -89,11 +88,10 @@ const BulkDataPage: React.FC = () => {
                 return;
             }
             
-            const pointsNum = parseInt(points, 10);
             const quantityNum = parseInt(quantity, 10);
             const formattedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
 
-            if (isNaN(pointsNum) || pointsNum < 0 || isNaN(quantityNum) || quantityNum < 1 || !formattedStatus) {
+            if (isNaN(quantityNum) || quantityNum < 1 || !formattedStatus) {
                 results.push({ row, data: null, status: 'ERROR', errorMessage: 'Invalid number or status format.', import: false, rowIndex: index });
                 return;
             }
@@ -104,7 +102,6 @@ const BulkDataPage: React.FC = () => {
                 name: name.trim(),
                 gameSystemId: gameSystem.id,
                 armyId: army.id,
-                points: pointsNum,
                 quantity: quantityNum,
                 status: formattedStatus,
                 description: '',
@@ -191,7 +188,6 @@ const BulkDataPage: React.FC = () => {
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">name</code>,
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">game system</code>,
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">army</code>,
-                        <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">points</code>,
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">quantity</code>, and
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code>.
                     </p>
