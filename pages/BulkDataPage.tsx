@@ -37,6 +37,7 @@ const BulkDataPage: React.FC = () => {
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
     const [importSummary, setImportSummary] = useState({ success: 0, errors: 0, skippedDuplicates: 0 });
+    const [importErrors, setImportErrors] = useState<ValidationResult[]>([]);
 
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +70,10 @@ const BulkDataPage: React.FC = () => {
         const validStatuses: Model['status'][] = ['Purchased', 'Printed', 'Primed', 'Painted', 'Based', 'Ready to Game'];
 
         data.forEach((row, index) => {
+            // Defensive check for malformed rows (e.g., from trailing empty lines)
+            if (Object.values(row).every(val => val === null || val === '')) {
+                return;
+            }
             const { name, 'game system': gameSystemName, army: armyName, quantity, status } = row;
             
             if (!name || !gameSystemName || !armyName || !quantity || !status) {
@@ -76,13 +81,13 @@ const BulkDataPage: React.FC = () => {
                 return;
             }
 
-            const gameSystem = gameSystems.find(gs => gs.name.toLowerCase() === gameSystemName.trim().toLowerCase());
+            const gameSystem = gameSystems.find(gs => gs.name.trim().toLowerCase() === gameSystemName.trim().toLowerCase());
             if (!gameSystem) {
                 results.push({ row, data: null, status: 'ERROR', errorMessage: `Game system "${gameSystemName}" not found.`, import: false, rowIndex: index });
                 return;
             }
 
-            const army = armies.find(a => a.name.toLowerCase() === armyName.trim().toLowerCase() && a.gameSystemId === gameSystem.id);
+            const army = armies.find(a => a.name.trim().toLowerCase() === armyName.trim().toLowerCase() && a.gameSystemId === gameSystem.id);
             if (!army) {
                 results.push({ row, data: null, status: 'ERROR', errorMessage: `Army "${armyName}" not found in "${gameSystemName}".`, import: false, rowIndex: index });
                 return;
@@ -91,8 +96,13 @@ const BulkDataPage: React.FC = () => {
             const quantityNum = parseInt(quantity, 10);
             const formattedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
 
-            if (isNaN(quantityNum) || quantityNum < 1 || !formattedStatus) {
-                results.push({ row, data: null, status: 'ERROR', errorMessage: 'Invalid number or status format.', import: false, rowIndex: index });
+            if (isNaN(quantityNum) || quantityNum < 1) {
+                results.push({ row, data: null, status: 'ERROR', errorMessage: `Invalid quantity: "${quantity}". Must be a number greater than 0.`, import: false, rowIndex: index });
+                return;
+            }
+            
+            if (!formattedStatus) {
+                results.push({ row, data: null, status: 'ERROR', errorMessage: `Invalid status: "${status}".`, import: false, rowIndex: index });
                 return;
             }
             
@@ -119,8 +129,14 @@ const BulkDataPage: React.FC = () => {
 
         setValidationResults(results);
 
-        if (results.some(r => r.status === 'DUPLICATE')) {
-            setShowReviewModal(true);
+        if (results.some(r => r.status === 'DUPLICATE' || r.status === 'ERROR')) {
+            const hasDuplicates = results.some(r => r.status === 'DUPLICATE');
+            if (hasDuplicates) {
+                setShowReviewModal(true);
+            } else {
+                // If there are only errors, go straight to summary
+                finalizeImport(results);
+            }
         } else {
             finalizeImport(results);
         }
@@ -137,12 +153,12 @@ const BulkDataPage: React.FC = () => {
     const finalizeImport = async (results: ValidationResult[]) => {
         const modelsToAdd: Omit<Model, 'id'>[] = [];
         let successCount = 0;
-        let errorCount = 0;
         let skippedDuplicatesCount = 0;
+        const errors: ValidationResult[] = [];
 
         results.forEach(result => {
             if (result.status === 'ERROR') {
-                errorCount++;
+                errors.push(result);
             } else if (result.import && result.data) {
                 modelsToAdd.push(result.data);
                 successCount++;
@@ -157,9 +173,10 @@ const BulkDataPage: React.FC = () => {
         
         setImportSummary({
             success: successCount,
-            errors: errorCount,
+            errors: errors.length,
             skippedDuplicates: skippedDuplicatesCount
         });
+        setImportErrors(errors);
         
         // Close review modal and open summary modal
         setShowReviewModal(false);
@@ -171,11 +188,13 @@ const BulkDataPage: React.FC = () => {
         setShowSummaryModal(false);
         setSelectedFile(null);
         setValidationResults([]);
+        setImportErrors([]);
         const fileInput = document.getElementById('csv-file-input') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
     };
 
     const duplicates = validationResults.filter(r => r.status === 'DUPLICATE');
+    const errorsInReview = validationResults.filter(r => r.status === 'ERROR');
 
     return (
         <div className="container mx-auto">
@@ -221,20 +240,39 @@ const BulkDataPage: React.FC = () => {
 
             {/* Review Duplicates Modal */}
             {showReviewModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
                     <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-2xl border border-border max-h-[90vh] flex flex-col">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-white">Review Duplicates</h3>
+                            <h3 className="text-xl font-bold text-white">Review Import</h3>
                             <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-white"><XIcon /></button>
                         </div>
-                        <p className="text-text-secondary mb-4">The following models already exist in your collection. Please select the ones you still wish to import.</p>
-                        <div className="flex justify-between items-center mb-4 p-2 bg-background rounded-md">
-                            <span className="font-semibold">Toggle All</span>
-                            <div>
-                                <button onClick={() => handleSelectAllDuplicates(true)} className="text-sm text-green-400 hover:underline mr-4">Select All</button>
-                                <button onClick={() => handleSelectAllDuplicates(false)} className="text-sm text-red-400 hover:underline">Deselect All</button>
+                        
+                        {errorsInReview.length > 0 && (
+                            <div className="mb-4">
+                                <h4 className="font-semibold text-red-400 mb-2">The following rows have errors and will not be imported:</h4>
+                                <ul className="space-y-2 bg-background p-3 rounded-md max-h-40 overflow-y-auto">
+                                    {errorsInReview.map(error => (
+                                        <li key={error.rowIndex} className="text-sm">
+                                            <p className="font-semibold">Row {error.rowIndex + 2}: {error.errorMessage}</p>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
-                        </div>
+                        )}
+                        
+                        {duplicates.length > 0 && (
+                           <>
+                            <p className="text-text-secondary mb-4">The following models already exist in your collection. Please select the ones you still wish to import.</p>
+                            <div className="flex justify-between items-center mb-4 p-2 bg-background rounded-md">
+                                <span className="font-semibold">Toggle All Duplicates</span>
+                                <div>
+                                    <button onClick={() => handleSelectAllDuplicates(true)} className="text-sm text-green-400 hover:underline mr-4">Select All</button>
+                                    <button onClick={() => handleSelectAllDuplicates(false)} className="text-sm text-red-400 hover:underline">Deselect All</button>
+                                </div>
+                            </div>
+                           </>
+                        )}
+
                         <div className="flex-grow overflow-y-auto space-y-2 pr-2">
                             {duplicates.map((result) => (
                                 <div key={result.rowIndex} className="flex items-center justify-between p-2 bg-background rounded-md">
@@ -254,7 +292,7 @@ const BulkDataPage: React.FC = () => {
                                 </div>
                             ))}
                         </div>
-                        <div className="flex justify-end gap-4 pt-6">
+                        <div className="flex justify-end gap-4 pt-6 flex-shrink-0">
                             <button onClick={() => setShowReviewModal(false)} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700">Cancel</button>
                             <button onClick={() => finalizeImport(validationResults)} className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500">Confirm Import</button>
                         </div>
@@ -264,15 +302,32 @@ const BulkDataPage: React.FC = () => {
 
             {/* Import Summary Modal */}
             {showSummaryModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
-                    <div className="bg-surface rounded-lg shadow-xl p-8 w-full max-w-md border border-border text-center">
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+                    <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-lg border border-border text-center flex flex-col max-h-[90vh]">
                         <h3 className="text-2xl font-bold text-white mb-4">Import Complete</h3>
                         <div className="space-y-3 text-left my-6">
                             <p className="text-lg text-green-400 flex justify-between"><span>Models Imported:</span> <span>{importSummary.success}</span></p>
                             <p className="text-lg text-yellow-400 flex justify-between"><span>Duplicates Skipped:</span> <span>{importSummary.skippedDuplicates}</span></p>
                             <p className="text-lg text-red-400 flex justify-between"><span>Rows with Errors:</span> <span>{importSummary.errors}</span></p>
                         </div>
-                        <button onClick={closeSummaryAndReset} className="mt-4 px-6 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 w-full">OK</button>
+                        
+                        {importErrors.length > 0 && (
+                            <div className="text-left mt-2 flex-grow overflow-y-auto">
+                                <h4 className="font-semibold text-text-primary mb-2">Error Details:</h4>
+                                <ul className="space-y-2 bg-background p-3 rounded-md">
+                                    {importErrors.map(error => (
+                                        <li key={error.rowIndex} className="text-sm border-b border-border pb-1 last:border-b-0">
+                                            <p className="text-red-400 font-semibold">Row {error.rowIndex + 2}: {error.errorMessage}</p>
+                                            <p className="text-text-secondary truncate text-xs">
+                                                Data: {Object.values(error.row).join(', ')}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        <button onClick={closeSummaryAndReset} className="mt-6 px-6 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 w-full flex-shrink-0">OK</button>
                     </div>
                 </div>
             )}
