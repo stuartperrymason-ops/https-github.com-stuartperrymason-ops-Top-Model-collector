@@ -25,7 +25,7 @@ export interface Model {
   gameSystemId: string; // Foreign key linking to a GameSystem
   description: string;
   quantity: number; // How many of this model the user owns
-  status: 'Purchased' | 'Printed' | 'Primed' | 'Painted' | 'Based' | 'Ready to Game'; // Painting status
+  status: 'Purchased' | 'Printed' | 'Assembled' | 'Primed' | 'Painted' | 'Based' | 'Ready to Game'; // Painting status
   imageUrl?: string; // Optional URL for an image of the model
 }
 

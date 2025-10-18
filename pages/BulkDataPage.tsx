@@ -67,7 +67,7 @@ const BulkDataPage: React.FC = () => {
 
     const validateCsvData = (data: CsvRow[]) => {
         const results: ValidationResult[] = [];
-        const validStatuses: Model['status'][] = ['Purchased', 'Printed', 'Primed', 'Painted', 'Based', 'Ready to Game'];
+        const validStatuses: Model['status'][] = ['Purchased', 'Printed', 'Assembled', 'Primed', 'Painted', 'Based', 'Ready to Game'];
 
         data.forEach((row, index) => {
             // Defensive check for malformed rows (e.g., from trailing empty lines)
@@ -211,7 +211,7 @@ const BulkDataPage: React.FC = () => {
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code>.
                     </p>
                     <p>
-                        The <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code> column must contain one of the following values (case-insensitive): Purchased, Printed, Primed, Painted, Based, Ready to Game.
+                        The <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code> column must contain one of the following values (case-insensitive): Purchased, Printed, Assembled, Primed, Painted, Based, Ready to Game.
                     </p>
                 </div>
                 <p className="text-text-secondary mb-4">

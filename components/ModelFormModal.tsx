@@ -169,6 +169,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
             <select name="status" id="status" value={formData.status} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
               <option value="Purchased">Purchased</option>
               <option value="Printed">Printed</option>
+              <option value="Assembled">Assembled</option>
               <option value="Primed">Primed</option>
               <option value="Painted">Painted</option>
               <option value="Based">Based</option>

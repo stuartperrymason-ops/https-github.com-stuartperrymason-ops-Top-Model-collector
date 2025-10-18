@@ -230,6 +230,7 @@ const CollectionPage: React.FC = () => {
                     >
                         <option value="Purchased">Purchased</option>
                         <option value="Printed">Printed</option>
+                        <option value="Assembled">Assembled</option>
                         <option value="Primed">Primed</option>
                         <option value="Painted">Painted</option>
                         <option value="Based">Based</option>

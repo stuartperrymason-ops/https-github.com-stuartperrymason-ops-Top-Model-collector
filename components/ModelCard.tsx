@@ -35,6 +35,8 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
         return 'bg-gray-500 text-white';
       case 'Printed':
         return 'bg-slate-500 text-white';
+      case 'Assembled':
+        return 'bg-cyan-600 text-white';
       case 'Primed':
         return 'bg-zinc-400 text-black';
       case 'Painted':
