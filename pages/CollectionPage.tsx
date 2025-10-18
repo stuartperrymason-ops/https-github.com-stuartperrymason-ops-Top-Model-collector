@@ -29,6 +29,7 @@ const CollectionPage: React.FC = () => {
   // State for points update modal
   const [isPointsModalOpen, setIsPointsModalOpen] = useState(false);
   const [newPoints, setNewPoints] = useState<string>('');
+  const [pointsError, setPointsError] = useState<string | null>(null);
 
 
   const handleAddModelClick = () => {
@@ -100,18 +101,37 @@ const CollectionPage: React.FC = () => {
     await bulkUpdateModels(selectedModelIds, { status: bulkStatus });
     toggleBulkEditMode();
   };
+
+  const handleClosePointsModal = () => {
+    setIsPointsModalOpen(false);
+    setNewPoints('');
+    setPointsError(null);
+  };
+  
+  const handlePointsChange = (value: string) => {
+    setNewPoints(value);
+    if (value.trim() === '') {
+      setPointsError('Point value cannot be empty.');
+    } else {
+      const points = Number(value);
+      if (isNaN(points) || points < 0 || !Number.isInteger(points)) {
+        setPointsError('Please enter a valid non-negative whole number.');
+      } else {
+        setPointsError(null);
+      }
+    }
+  };
   
   const handleConfirmUpdatePoints = async (e: React.FormEvent) => {
     e.preventDefault();
-    const points = parseInt(newPoints, 10);
-    if (!isNaN(points) && points >= 0) {
-      await bulkUpdateModels(selectedModelIds, { points });
-      setIsPointsModalOpen(false);
-      setNewPoints('');
-      toggleBulkEditMode();
-    } else {
-      alert('Invalid point value. Please enter a non-negative number.');
+    if (pointsError || newPoints.trim() === '') {
+      return; // Should be blocked by disabled button, but good practice.
     }
+    
+    const points = parseInt(newPoints, 10);
+    await bulkUpdateModels(selectedModelIds, { points });
+    handleClosePointsModal();
+    toggleBulkEditMode();
   };
 
 
@@ -231,7 +251,7 @@ const CollectionPage: React.FC = () => {
           <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-sm border border-border">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-white">Update Points</h3>
-              <button onClick={() => { setIsPointsModalOpen(false); setNewPoints(''); }} className="text-gray-400 hover:text-white">
+              <button onClick={handleClosePointsModal} className="text-gray-400 hover:text-white">
                 <XIcon />
               </button>
             </div>
@@ -246,16 +266,23 @@ const CollectionPage: React.FC = () => {
                   name="points" 
                   id="points-bulk" 
                   value={newPoints} 
-                  onChange={(e) => setNewPoints(e.target.value)} 
+                  onChange={(e) => handlePointsChange(e.target.value)} 
                   required 
                   min="0"
-                  className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className={`w-full bg-background border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ${pointsError ? 'border-red-500 focus:ring-red-500' : 'border-border focus:ring-primary'}`}
                   autoFocus
                 />
+                {pointsError && <p className="text-red-500 text-sm mt-1">{pointsError}</p>}
               </div>
               <div className="flex justify-end gap-4 pt-6">
-                <button type="button" onClick={() => { setIsPointsModalOpen(false); setNewPoints(''); }} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors">Save</button>
+                <button type="button" onClick={handleClosePointsModal} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!!pointsError || newPoints.trim() === ''}
+                >
+                    Save
+                </button>
               </div>
             </form>
           </div>

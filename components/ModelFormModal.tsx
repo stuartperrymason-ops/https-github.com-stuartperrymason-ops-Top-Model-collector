@@ -17,7 +17,7 @@ interface ModelFormModalProps {
 }
 
 const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model }) => {
-  const { gameSystems, armies, addModel, updateModel } = useData();
+  const { gameSystems, armies, models, addModel, updateModel } = useData();
   const [formData, setFormData] = useState<Omit<Model, 'id'>>({
     name: '',
     armyId: '',
@@ -87,6 +87,20 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for duplicates only when creating a new model
+    if (!model) {
+      const isDuplicate = models.some(
+        m => m.name.trim().toLowerCase() === formData.name.trim().toLowerCase() && m.armyId === formData.armyId
+      );
+
+      if (isDuplicate) {
+        if (!window.confirm(`A model named "${formData.name.trim()}" already exists in this army. Do you want to add it anyway?`)) {
+          return; // User clicked 'Cancel', so we stop the submission.
+        }
+      }
+    }
+    
     if (model) {
       // Update existing model
       await updateModel(model.id, formData);
