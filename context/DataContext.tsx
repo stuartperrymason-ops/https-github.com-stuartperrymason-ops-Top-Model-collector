@@ -29,6 +29,8 @@ interface DataContextState {
   addModel: (model: Omit<Model, 'id'>) => Promise<void>;
   updateModel: (id: string, model: Partial<Omit<Model, 'id'>>) => Promise<void>;
   deleteModel: (id: string) => Promise<void>;
+  bulkUpdateModels: (ids: string[], updates: Partial<Omit<Model, 'id'>>) => Promise<void>;
+  bulkDeleteModels: (ids: string[]) => Promise<void>;
 }
 
 // Create the context with a default undefined value.
@@ -191,6 +193,35 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
 
+  // Bulk operations for Models
+  const bulkUpdateModels = async (ids: string[], updates: Partial<Omit<Model, 'id'>>) => {
+    try {
+      // In a real app, this would ideally be a single API call.
+      // For our mock server, we loop and call the single update endpoint.
+      await Promise.all(ids.map(id => apiService.updateModel(id, updates)));
+      
+      // Update local state in one go for better performance.
+      setModels(prev =>
+        prev.map(m => (ids.includes(m.id) ? { ...m, ...updates, id: m.id } : m))
+      );
+      addToast(`${ids.length} models updated successfully!`, 'success');
+    } catch (err) {
+      console.error('Failed to bulk update models:', err);
+      addToast('Failed to bulk update models.', 'error');
+    }
+  };
+
+  const bulkDeleteModels = async (ids: string[]) => {
+    try {
+      await Promise.all(ids.map(id => apiService.deleteModel(id)));
+      setModels(prev => prev.filter(m => !ids.includes(m.id)));
+      addToast(`${ids.length} models deleted successfully!`, 'success');
+    } catch (err) {
+      console.error('Failed to bulk delete models:', err);
+      addToast('Failed to bulk delete models.', 'error');
+    }
+  };
+
   // Value provided to consuming components.
   const value = {
     gameSystems,
@@ -209,6 +240,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     addModel,
     updateModel,
     deleteModel,
+    bulkUpdateModels,
+    bulkDeleteModels,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

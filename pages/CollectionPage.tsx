@@ -12,7 +12,7 @@ import { PlusIcon } from '../components/icons/Icons';
 import { Model } from '../types';
 
 const CollectionPage: React.FC = () => {
-  const { models, gameSystems, armies, loading, error } = useData();
+  const { models, gameSystems, armies, loading, error, bulkUpdateModels, bulkDeleteModels } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
 
@@ -20,6 +20,11 @@ const CollectionPage: React.FC = () => {
   const [gameSystemFilter, setGameSystemFilter] = useState<string>('');
   const [armyFilter, setArmyFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // State for bulk actions
+  const [isBulkEditMode, setIsBulkEditMode] = useState(false);
+  const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<Model['status']>('unpainted');
 
   const handleAddModelClick = () => {
     setSelectedModel(null);
@@ -57,6 +62,52 @@ const CollectionPage: React.FC = () => {
     }
   }, [availableArmies, armyFilter]);
 
+  // --- Bulk Action Handlers ---
+  const toggleBulkEditMode = () => {
+    setIsBulkEditMode(prev => !prev);
+    setSelectedModelIds([]);
+  };
+
+  const handleSelectModel = (modelId: string) => {
+    setSelectedModelIds(prev =>
+      prev.includes(modelId)
+        ? prev.filter(id => id !== modelId)
+        : [...prev, modelId]
+    );
+  };
+  
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedModelIds(filteredModels.map(m => m.id));
+    } else {
+      setSelectedModelIds([]);
+    }
+  };
+  
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedModelIds.length} models?`)) {
+        await bulkDeleteModels(selectedModelIds);
+        toggleBulkEditMode();
+    }
+  };
+
+  const handleBulkUpdateStatus = async () => {
+    await bulkUpdateModels(selectedModelIds, { status: bulkStatus });
+    toggleBulkEditMode();
+  };
+  
+  const handleBulkUpdatePoints = async () => {
+    const pointsStr = prompt('Enter the new point value for the selected models:');
+    if (pointsStr) {
+      const points = parseInt(pointsStr, 10);
+      if (!isNaN(points) && points >= 0) {
+        await bulkUpdateModels(selectedModelIds, { points });
+        toggleBulkEditMode();
+      } else {
+        alert('Invalid point value. Please enter a non-negative number.');
+      }
+    }
+  };
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><p>Loading your collection...</p></div>;
@@ -67,16 +118,24 @@ const CollectionPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto pb-20"> {/* Padding bottom for bulk actions toolbar */}
       <header className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-bold text-white">My Collection</h1>
-        <button
-          onClick={handleAddModelClick}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 focus:ring-offset-background transition duration-300"
-        >
-          <PlusIcon />
-          Add Model
-        </button>
+        <div className="flex gap-2">
+           <button
+             onClick={toggleBulkEditMode}
+             className={`px-4 py-2 font-semibold rounded-lg shadow-md transition duration-300 ${isBulkEditMode ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-surface hover:bg-gray-700 text-text-primary border border-border'}`}
+           >
+             {isBulkEditMode ? 'Cancel Bulk Edit' : 'Bulk Edit'}
+           </button>
+           <button
+             onClick={handleAddModelClick}
+             className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 focus:ring-offset-background transition duration-300"
+           >
+             <PlusIcon />
+             Add Model
+           </button>
+        </div>
       </header>
 
       {/* Filter controls */}
@@ -110,7 +169,14 @@ const CollectionPage: React.FC = () => {
       {filteredModels.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredModels.map(model => (
-            <ModelCard key={model.id} model={model} onEdit={handleEditModel} />
+            <ModelCard
+              key={model.id}
+              model={model}
+              onEdit={handleEditModel}
+              isBulkEditMode={isBulkEditMode}
+              isSelected={selectedModelIds.includes(model.id)}
+              onSelect={handleSelectModel}
+            />
           ))}
         </div>
       ) : (
@@ -118,6 +184,40 @@ const CollectionPage: React.FC = () => {
           <p className="text-xl text-text-secondary">Your collection is empty.</p>
           <p className="text-text-secondary">Click "Add Model" to get started!</p>
         </div>
+      )}
+
+      {isBulkEditMode && selectedModelIds.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-surface border-t border-border p-3 shadow-lg z-40 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                  <input
+                      type="checkbox"
+                      className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary bg-surface"
+                      onChange={handleSelectAll}
+                      checked={filteredModels.length > 0 && selectedModelIds.length === filteredModels.length}
+                      title="Select All/None"
+                  />
+                  <span className="font-semibold">{selectedModelIds.length} selected</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                  {/* Status update */}
+                  <div className="flex items-center gap-2">
+                    <select
+                        value={bulkStatus}
+                        onChange={(e) => setBulkStatus(e.target.value as Model['status'])}
+                        className="bg-background border border-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                        <option value="unpainted">Unpainted</option>
+                        <option value="wip">Work in Progress</option>
+                        <option value="painted">Painted</option>
+                    </select>
+                    <button onClick={handleBulkUpdateStatus} className="px-3 py-1.5 text-sm bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">Apply Status</button>
+                  </div>
+                  {/* Points update */}
+                  <button onClick={handleBulkUpdatePoints} className="px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition-colors">Update Points</button>
+                  {/* Delete */}
+                  <button onClick={handleBulkDelete} className="px-3 py-1.5 text-sm bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Delete</button>
+              </div>
+          </div>
       )}
 
       {isModalOpen && (
