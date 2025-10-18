@@ -1,24 +1,23 @@
 /**
  * @file ModelFormModal.tsx
- * @description A modal form for adding a new model or editing an existing one.
- * It includes dynamic form fields and a feature to generate a description using the Gemini AI.
+ * @description A modal dialog with a form for creating or editing a model.
+ * It uses the DataContext to perform add/update operations and for populating dropdowns.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Model } from '../types';
 import { useData } from '../context/DataContext';
-import { Model, Army } from '../types';
 import { generateDescription } from '../services/geminiService';
-import { addModel, updateModel } from '../services/apiService';
-import { SparklesIcon } from './icons/Icons';
+import { SparklesIcon, XIcon } from './icons/Icons';
 
 interface ModelFormModalProps {
-  model?: Model; // The model to edit. If undefined, the form is for adding a new model.
-  onClose: () => void; // Callback to close the modal.
+  isOpen: boolean;
+  onClose: () => void;
+  model: Model | null; // Pass model for editing, null for adding
 }
 
-const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
-  const { state, dispatch } = useData();
-  // Form state is managed locally within this component.
+const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model }) => {
+  const { gameSystems, armies, addModel, updateModel } = useData();
   const [formData, setFormData] = useState<Omit<Model, 'id'>>({
     name: '',
     armyId: '',
@@ -29,145 +28,153 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ model, onClose }) => {
     status: 'unpainted',
     imageUrl: '',
   });
-  // State to hold the list of armies available for the selected game system.
-  const [availableArmies, setAvailableArmies] = useState<Army[]>([]);
-  // State to track the loading status of the AI description generation.
   const [isGenerating, setIsGenerating] = useState(false);
-  // State to track submission status
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // `useEffect` to pre-populate the form when a model is passed for editing.
   useEffect(() => {
     if (model) {
-      setFormData(model);
-    }
-  }, [model]);
-  
-  // `useEffect` to update the `availableArmies` dropdown whenever the selected game system changes.
-  useEffect(() => {
-    if (formData.gameSystemId) {
-      setAvailableArmies(state.armies.filter(a => a.gameSystemId === formData.gameSystemId));
-      // If the currently selected army doesn't belong to the new game system, reset the army selection.
-      if (!state.armies.some(a => a.gameSystemId === formData.gameSystemId && a.id === formData.armyId)) {
-        setFormData(f => ({ ...f, armyId: ''}));
-      }
+      setFormData({ ...model });
     } else {
-      setAvailableArmies([]);
-      setFormData(f => ({...f, armyId: ''}));
+      // Reset form for new model
+      setFormData({
+        name: '',
+        armyId: '',
+        gameSystemId: '',
+        description: '',
+        points: 0,
+        quantity: 1,
+        status: 'unpainted',
+        imageUrl: '',
+      });
     }
-  }, [formData.gameSystemId, state.armies, formData.armyId]);
+  }, [model, isOpen]);
 
-  // A generic handler for updating form state on input changes.
+  const availableArmies = useMemo(() => {
+    if (!formData.gameSystemId) return [];
+    return armies.filter(army => army.gameSystemId === formData.gameSystemId);
+  }, [armies, formData.gameSystemId]);
+  
+  // Effect to reset armyId if gameSystemId changes and the current armyId is no longer valid
+  useEffect(() => {
+    if (formData.gameSystemId && !availableArmies.some(a => a.id === formData.armyId)) {
+        setFormData(prev => ({ ...prev, armyId: '' }));
+    }
+  }, [formData.gameSystemId, availableArmies, formData.armyId]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    // For numeric fields, parse the value to an integer.
-    setFormData(prev => ({ ...prev, [name]: name === 'points' || name === 'quantity' ? parseInt(value, 10) : value }));
+    setFormData(prev => ({ ...prev, [name]: name === 'points' || name === 'quantity' ? parseInt(value, 10) || 0 : value }));
   };
 
-  // Handles the AI description generation.
   const handleGenerateDescription = async () => {
-      if (!formData.name || !formData.armyId || !formData.gameSystemId) {
-          alert("Please fill in Name, Game System, and Army before generating a description.");
-          return;
-      }
-      setIsGenerating(true);
-      const armyName = state.armies.find(a => a.id === formData.armyId)?.name || '';
-      const gameSystemName = state.gameSystems.find(gs => gs.id === formData.gameSystemId)?.name || '';
-      const description = await generateDescription(formData.name, armyName, gameSystemName);
-      setFormData(prev => ({...prev, description}));
-      setIsGenerating(false);
-  };
-
-  // Handles form submission for both creating and updating a model.
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+    if (!formData.name || !formData.armyId || !formData.gameSystemId) {
+        alert("Please select a Game System, Army, and enter a Model Name first.");
+        return;
+    }
+    setIsGenerating(true);
     try {
-      if (model) {
-        // If a model is being edited, call the update API service.
-        const updatedModel = await updateModel(model.id, { ...formData, id: model.id });
-        dispatch({ type: 'UPDATE_MODEL', payload: updatedModel });
-      } else {
-        // Otherwise, call the add API service.
-        const newModel = await addModel(formData);
-        dispatch({ type: 'ADD_MODEL', payload: newModel });
-      }
-      onClose(); // Close the modal after successful submission.
+        const armyName = armies.find(a => a.id === formData.armyId)?.name || '';
+        const gameSystemName = gameSystems.find(gs => gs.id === formData.gameSystemId)?.name || '';
+        const desc = await generateDescription(formData.name, armyName, gameSystemName);
+        setFormData(prev => ({ ...prev, description: desc }));
     } catch (error) {
-      console.error("Failed to save model:", error);
-      alert("Failed to save model. Please try again.");
+        console.error("Failed to generate description:", error);
+        alert("There was an error generating the description.");
     } finally {
-      setIsSubmitting(false);
+        setIsGenerating(false);
     }
   };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (model) {
+      // Update existing model
+      await updateModel(model.id, formData);
+    } else {
+      // Add new model
+      await addModel(formData);
+    }
+    onClose();
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
-      <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-lg max-h-screen overflow-y-auto border border-border">
-        <h2 className="text-2xl font-bold mb-4">{model ? 'Edit Model' : 'Add New Model'}</h2>
+      <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-border">
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-white">{model ? 'Edit Model' : 'Add New Model'}</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-white">
+              <XIcon />
+            </button>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">Model Name</label>
+            <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium">Game System</label>
-              <select name="gameSystemId" value={formData.gameSystemId} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2">
-                <option value="">Select System</option>
-                {state.gameSystems.map(gs => <option key={gs.id} value={gs.id}>{gs.name}</option>)}
+              <label htmlFor="gameSystemId" className="block text-sm font-medium text-text-secondary mb-1">Game System</label>
+              <select name="gameSystemId" id="gameSystemId" value={formData.gameSystemId} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="" disabled>Select a system</option>
+                {gameSystems.map(gs => <option key={gs.id} value={gs.id}>{gs.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium">Army</label>
-              <select name="armyId" value={formData.armyId} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2" disabled={!formData.gameSystemId}>
-                <option value="">Select Army</option>
+              <label htmlFor="armyId" className="block text-sm font-medium text-text-secondary mb-1">Army</label>
+              <select name="armyId" id="armyId" value={formData.armyId} onChange={handleChange} required disabled={!formData.gameSystemId} className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50">
+                <option value="" disabled>Select an army</option>
                 {availableArmies.map(army => <option key={army.id} value={army.id}>{army.name}</option>)}
               </select>
             </div>
           </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">Description</label>
+            <div className="relative">
+                <textarea name="description" id="description" value={formData.description} onChange={handleChange} rows={4} className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary pr-10"></textarea>
+                <button
+                    type="button"
+                    onClick={handleGenerateDescription}
+                    disabled={isGenerating}
+                    className="absolute top-2 right-2 p-1 bg-primary text-white rounded-full hover:bg-indigo-500 disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors"
+                    title="Generate description with AI"
+                >
+                    {isGenerating ? <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div> : <SparklesIcon />}
+                </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                  <label htmlFor="points" className="block text-sm font-medium text-text-secondary mb-1">Points</label>
+                  <input type="number" name="points" id="points" value={formData.points} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <div>
+                  <label htmlFor="quantity" className="block text-sm font-medium text-text-secondary mb-1">Quantity</label>
+                  <input type="number" name="quantity" id="quantity" value={formData.quantity} onChange={handleChange} required min="1" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+          </div>
+
+          <div>
+            <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">Painting Status</label>
+            <select name="status" id="status" value={formData.status} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+              <option value="unpainted">Unpainted</option>
+              <option value="wip">Work in Progress</option>
+              <option value="painted">Painted</option>
+            </select>
+          </div>
           
           <div>
-            <label className="block text-sm font-medium">Model Name</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Description</label>
-            <div className="relative">
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full bg-background border border-border rounded-md p-2 pr-10"/>
-              <button type="button" onClick={handleGenerateDescription} disabled={isGenerating} className="absolute top-2 right-2 p-1 bg-primary rounded-full text-white hover:bg-indigo-500 disabled:bg-gray-500">
-                <SparklesIcon />
-              </button>
-            </div>
-            {isGenerating && <p className="text-xs text-primary mt-1">Generating with AI...</p>}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium">Quantity</label>
-              <input type="number" name="quantity" min="1" value={formData.quantity} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Points</label>
-              <input type="number" name="points" min="0" value={formData.points} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Status</label>
-              <select name="status" value={formData.status} onChange={handleChange} required className="mt-1 block w-full bg-background border border-border rounded-md p-2">
-                <option value="unpainted">Unpainted</option>
-                <option value="wip">Work in Progress</option>
-                <option value="painted">Painted</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Image URL</label>
-            <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleChange} placeholder="https://..." className="mt-1 block w-full bg-background border border-border rounded-md p-2"/>
+            <label htmlFor="imageUrl" className="block text-sm font-medium text-text-secondary mb-1">Image URL (Optional)</label>
+            <input type="text" name="imageUrl" id="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
 
           <div className="flex justify-end gap-4 pt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700" disabled={isSubmitting}>Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-indigo-500 disabled:bg-gray-500" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : (model ? 'Update' : 'Save')}
-            </button>
+            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors">{model ? 'Save Changes' : 'Add Model'}</button>
           </div>
         </form>
       </div>

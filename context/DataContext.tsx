@@ -1,151 +1,224 @@
 /**
  * @file DataContext.tsx
- * @description This file sets up a global state management system using React's Context API and the `useReducer` hook.
- * It provides a centralized place to manage all application data (game systems, armies, models)
- * and the logic for updating that data. It now fetches its initial state from a backend API.
+ * @description Provides a global state context for managing game systems, armies, and models data.
+ * It fetches initial data and offers functions to interact with the API for CRUD operations.
  */
 
-import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
-import { GameSystem, Army, Model } from '../types';
-import { getInitialData } from '../services/apiService';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { GameSystem, Army, Model, ToastMessage } from '../types';
+import * as apiService from '../services/apiService';
 
-// Defines the shape of our global state.
-interface State {
+// Define the shape of the context state.
+interface DataContextState {
   gameSystems: GameSystem[];
   armies: Army[];
   models: Model[];
-  loading: boolean; // To track the initial data load.
-  error: string | null; // To store any initial loading errors.
+  loading: boolean;
+  error: string | null;
+  toasts: ToastMessage[];
+  addToast: (message: string, type: 'success' | 'error') => void;
+  // Game System functions
+  addGameSystem: (name: string) => Promise<void>;
+  updateGameSystem: (id: string, name: string) => Promise<void>;
+  deleteGameSystem: (id: string) => Promise<void>;
+  // Army functions
+  addArmy: (name: string, gameSystemId: string) => Promise<void>;
+  updateArmy: (id: string, name: string, gameSystemId: string) => Promise<void>;
+  deleteArmy: (id: string) => Promise<void>;
+  // Model functions
+  addModel: (model: Omit<Model, 'id'>) => Promise<void>;
+  updateModel: (id: string, model: Partial<Omit<Model, 'id'>>) => Promise<void>;
+  deleteModel: (id: string) => Promise<void>;
 }
 
-// Defines the possible actions that can be dispatched to update the state.
-type Action =
-  | { type: 'INITIALIZE_DATA'; payload: { gameSystems: GameSystem[]; armies: Army[]; models: Model[] } }
-  | { type: 'SET_ERROR'; payload: string }
-  | { type: 'ADD_GAMESYSTEM'; payload: GameSystem }
-  | { type: 'DELETE_GAMESYSTEM'; payload: string }
-  | { type: 'ADD_ARMY'; payload: Army }
-  | { type: 'DELETE_ARMY'; payload: string }
-  | { type: 'ADD_MODEL'; payload: Model }
-  | { type: 'UPDATE_MODEL'; payload: Model }
-  | { type: 'DELETE_MODEL'; payload: string }
-  | { type: 'BULK_IMPORT'; payload: { models: Model[]; armies: Army[]; gameSystems: GameSystem[] } };
+// Create the context with a default undefined value.
+const DataContext = createContext<DataContextState | undefined>(undefined);
 
-// The initial state of the application is now empty, waiting for data from the API.
-const initialState: State = {
-  gameSystems: [],
-  armies: [],
-  models: [],
-  loading: true,
-  error: null,
-};
+// Define props for the provider component.
+interface DataProviderProps {
+  children: ReactNode;
+}
 
-// The reducer function handles state updates based on dispatched actions.
-// It's now a pure function that only modifies state based on action payloads.
-const dataReducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case 'INITIALIZE_DATA':
-        return { ...state, ...action.payload, loading: false };
-    case 'SET_ERROR':
-        return { ...state, loading: false, error: action.payload };
-    case 'ADD_GAMESYSTEM':
-      return { ...state, gameSystems: [...state.gameSystems, action.payload] };
-    case 'DELETE_GAMESYSTEM':
-      // When a game system is deleted, all its associated armies and models must also be removed.
-      return {
-        ...state,
-        gameSystems: state.gameSystems.filter(gs => gs.id !== action.payload),
-        armies: state.armies.filter(a => a.gameSystemId !== action.payload),
-        models: state.models.filter(m => m.gameSystemId !== action.payload),
-      };
-    case 'ADD_ARMY':
-      return { ...state, armies: [...state.armies, action.payload] };
-    case 'DELETE_ARMY':
-      // When an army is deleted, its associated models must also be removed.
-      return {
-        ...state,
-        armies: state.armies.filter(a => a.id !== action.payload),
-        models: state.models.filter(m => m.armyId !== action.payload),
-      };
-    case 'ADD_MODEL':
-      return { ...state, models: [...state.models, action.payload] };
-    case 'UPDATE_MODEL':
-      return {
-        ...state,
-        models: state.models.map(m => m.id === action.payload.id ? action.payload : m),
-      };
-    case 'DELETE_MODEL':
-      return { ...state, models: state.models.filter(m => m.id !== action.payload) };
-    case 'BULK_IMPORT':
-       // This assumes the backend returns the newly created items, and we refresh the state.
-       // For simplicity here, we'll just merge them, but a better approach would be to re-fetch.
-      return {
-        ...state,
-        gameSystems: [...state.gameSystems, ...action.payload.gameSystems],
-        armies: [...state.armies, ...action.payload.armies],
-        models: [...state.models, ...action.payload.models],
-      };
-    default:
-      return state;
-  }
-};
+// The provider component that will wrap the application.
+export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
+  const [gameSystems, setGameSystems] = useState<GameSystem[]>([]);
+  const [armies, setArmies] = useState<Army[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-// Create the React Context.
-const DataContext = createContext<{
-  state: State;
-  dispatch: React.Dispatch<Action>;
-}>({
-  state: initialState,
-  dispatch: () => null,
-});
+  // Function to add a toast message.
+  const addToast = (message: string, type: 'success' | 'error') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
+    }, 3000);
+  };
 
-// Create the Provider component. This component will wrap parts of our app that need access to the context.
-export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(dataReducer, initialState);
+  // Memoized function to fetch all data.
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [systems, armyData, modelData] = await Promise.all([
+        apiService.getGameSystems(),
+        apiService.getArmies(),
+        apiService.getModels(),
+      ]);
+      setGameSystems(systems);
+      setArmies(armyData);
+      setModels(modelData);
+    } catch (err) {
+      setError('Failed to load data. Please try refreshing the page.');
+      console.error(err);
+      addToast('Failed to load data.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // useEffect hook to fetch data from the API when the component mounts.
+  // Fetch data on component mount.
   useEffect(() => {
-    const loadData = async () => {
-        try {
-            // A backend developer would need to implement these API endpoints.
-            // For now, this will fail gracefully.
-            const data = await getInitialData();
-            dispatch({ type: 'INITIALIZE_DATA', payload: data });
-        } catch (error) {
-            console.error("Failed to fetch initial data:", error);
-            // In a real app, you might show a more user-friendly error message.
-            // For now, we'll proceed with an empty state.
-             dispatch({ type: 'SET_ERROR', payload: 'Could not connect to the backend. Please ensure the server is running.' });
-             // Fallback to demo data if API fails
-            dispatch({ type: 'INITIALIZE_DATA', payload: {
-              gameSystems: [
-                { id: 'gs1', name: 'Warhammer 40,000' },
-                { id: 'gs2', name: 'Age of Sigmar' },
-              ],
-              armies: [
-                { id: 'a1', name: 'Ultramarines', gameSystemId: 'gs1' },
-                { id: 'a2', name: 'Orks', gameSystemId: 'gs1' },
-                { id: 'a3', name: 'Stormcast Eternals', gameSystemId: 'gs2' },
-              ],
-              models: [
-                { id: 'm1', name: 'Primaris Intercessor Squad', armyId: 'a1', gameSystemId: 'gs1', description: 'Standard troops for the Ultramarines.', points: 100, quantity: 10, status: 'painted', imageUrl: 'https://picsum.photos/seed/intercessor/400/300' },
-                { id: 'm2', name: 'Ork Boyz', armyId: 'a2', gameSystemId: 'gs1', description: 'The backbone of any Ork WAAAGH!', points: 80, quantity: 12, status: 'wip', imageUrl: 'https://picsum.photos/seed/orkboyz/400/300' },
-                { id: 'm3', name: 'Liberators', armyId: 'a3', gameSystemId: 'gs2', description: 'Shining warriors of Sigmar.', points: 120, quantity: 5, status: 'unpainted', imageUrl: 'https://picsum.photos/seed/liberators/400/300' },
-              ],
-            }});
+    fetchData();
+  }, [fetchData]);
 
-        }
-    };
-    loadData();
-  }, []); // The empty dependency array ensures this runs only once on mount.
+  // CRUD operations for Game Systems
+  const addGameSystem = async (name: string) => {
+    try {
+      const newSystem = await apiService.addGameSystem({ name });
+      setGameSystems(prev => [...prev, newSystem]);
+      addToast('Game system added successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to add game system:', err);
+      addToast('Failed to add game system.', 'error');
+    }
+  };
+  
+  const updateGameSystem = async (id: string, name: string) => {
+    try {
+      const updatedSystem = await apiService.updateGameSystem(id, { name });
+      setGameSystems(prev => prev.map(s => (s.id === id ? updatedSystem : s)));
+      addToast('Game system updated successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to update game system:', err);
+      addToast('Failed to update game system.', 'error');
+    }
+  };
 
+  const deleteGameSystem = async (id: string) => {
+    try {
+      await apiService.deleteGameSystem(id);
+      setGameSystems(prev => prev.filter(s => s.id !== id));
+      // Also delete associated armies and models
+      setArmies(prev => prev.filter(a => a.gameSystemId !== id));
+      setModels(prev => prev.filter(m => m.gameSystemId !== id));
+      addToast('Game system deleted successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to delete game system:', err);
+      addToast('Failed to delete game system.', 'error');
+    }
+  };
 
-  return (
-    <DataContext.Provider value={{ state, dispatch }}>
-      {children}
-    </DataContext.Provider>
-  );
+  // CRUD operations for Armies
+  const addArmy = async (name: string, gameSystemId: string) => {
+    try {
+      const newArmy = await apiService.addArmy({ name, gameSystemId });
+      setArmies(prev => [...prev, newArmy]);
+      addToast('Army added successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to add army:', err);
+      addToast('Failed to add army.', 'error');
+    }
+  };
+  
+  const updateArmy = async (id: string, name: string, gameSystemId: string) => {
+    try {
+      const updatedArmy = await apiService.updateArmy(id, { name, gameSystemId });
+      setArmies(prev => prev.map(a => (a.id === id ? updatedArmy : a)));
+      addToast('Army updated successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to update army:', err);
+      addToast('Failed to update army.', 'error');
+    }
+  };
+  
+  const deleteArmy = async (id: string) => {
+    try {
+      await apiService.deleteArmy(id);
+      setArmies(prev => prev.filter(a => a.id !== id));
+      // Also delete associated models
+      setModels(prev => prev.filter(m => m.armyId !== id));
+      addToast('Army deleted successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to delete army:', err);
+      addToast('Failed to delete army.', 'error');
+    }
+  };
+
+  // CRUD operations for Models
+  const addModel = async (model: Omit<Model, 'id'>) => {
+    try {
+      const newModel = await apiService.addModel(model);
+      setModels(prev => [...prev, newModel]);
+      addToast('Model added successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to add model:', err);
+      addToast('Failed to add model.', 'error');
+    }
+  };
+  
+  const updateModel = async (id: string, model: Partial<Omit<Model, 'id'>>) => {
+    try {
+      const updatedModel = await apiService.updateModel(id, model);
+      setModels(prev => prev.map(m => (m.id === id ? updatedModel : m)));
+      addToast('Model updated successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to update model:', err);
+      addToast('Failed to update model.', 'error');
+    }
+  };
+  
+  const deleteModel = async (id: string) => {
+    try {
+      await apiService.deleteModel(id);
+      setModels(prev => prev.filter(m => m.id !== id));
+      addToast('Model deleted successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to delete model:', err);
+      addToast('Failed to delete model.', 'error');
+    }
+  };
+
+  // Value provided to consuming components.
+  const value = {
+    gameSystems,
+    armies,
+    models,
+    loading,
+    error,
+    toasts,
+    addToast,
+    addGameSystem,
+    updateGameSystem,
+    deleteGameSystem,
+    addArmy,
+    updateArmy,
+    deleteArmy,
+    addModel,
+    updateModel,
+    deleteModel,
+  };
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// Custom hook for easy access to the context's state and dispatch function.
-export const useData = () => useContext(DataContext);
+// Custom hook to use the data context.
+export const useData = () => {
+  const context = useContext(DataContext);
+  if (context === undefined) {
+    throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
+};

@@ -1,86 +1,122 @@
 /**
  * @file apiService.ts
- * @description This service centralizes all communication with the backend API.
- * It provides functions for CRUD (Create, Read, Update, Delete) operations on all data models.
- * This abstracts away the fetch logic from the components and context.
+ * @description This service provides functions for interacting with the backend API.
+ * It encapsulates all HTTP requests for CRUD operations on game systems, armies, and models.
  */
 
-import { Model, Army, GameSystem } from '../types';
+import { GameSystem, Army, Model } from '../types';
 
-// The base URL for our API. In a real app, this would come from an environment variable.
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'http://localhost:3001/api';
 
-/**
- * A helper function to handle fetch responses.
- * It checks for HTTP errors and parses the JSON response.
- * @param response - The Response object from a fetch call.
- * @returns A promise that resolves with the JSON data.
- */
-async function handleResponse<T>(response: Response): Promise<T> {
+// Helper function to handle fetch responses.
+const handleResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API Error: ${response.statusText} - ${errorText}`);
+    const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
-  return response.json() as Promise<T>;
-}
+  return response.json();
+};
 
-// --- Game System API ---
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const getGameSystems = (): Promise<GameSystem[]> => fetch(`${API_BASE_URL}/gamesystems`).then(res => handleResponse<GameSystem[]>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const addGameSystem = (data: Omit<GameSystem, 'id'>): Promise<GameSystem> => fetch(`${API_BASE_URL}/gamesystems`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<GameSystem>(res));
-export const deleteGameSystem = (id: string): Promise<void> => fetch(`${API_BASE_URL}/gamesystems/${id}`, { method: 'DELETE' }).then(res => { if(!res.ok) throw new Error('Failed to delete')});
+// --- Game System API calls ---
 
-// --- Army API ---
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const getArmies = (): Promise<Army[]> => fetch(`${API_BASE_URL}/armies`).then(res => handleResponse<Army[]>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const addArmy = (data: Omit<Army, 'id'>): Promise<Army> => fetch(`${API_BASE_URL}/armies`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<Army>(res));
-export const deleteArmy = (id: string): Promise<void> => fetch(`${API_BASE_URL}/armies/${id}`, { method: 'DELETE' }).then(res => { if(!res.ok) throw new Error('Failed to delete')});
+export const getGameSystems = async (): Promise<GameSystem[]> => {
+  const response = await fetch(`${API_BASE_URL}/game-systems`);
+  return handleResponse<GameSystem[]>(response);
+};
 
-// --- Model API ---
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const getModels = (): Promise<Model[]> => fetch(`${API_BASE_URL}/models`).then(res => handleResponse<Model[]>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const addModel = (data: Omit<Model, 'id'>): Promise<Model> => fetch(`${API_BASE_URL}/models`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<Model>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const updateModel = (id: string, data: Model): Promise<Model> => fetch(`${API_BASE_URL}/models/${id}`, {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<Model>(res));
-export const deleteModel = (id: string): Promise<void> => fetch(`${API_BASE_URL}/models/${id}`, { method: 'DELETE' }).then(res => { if(!res.ok) throw new Error('Failed to delete')});
-
-// --- Bulk Import API ---
-export const bulkImport = (data: { models: Model[]; armies: Army[]; gameSystems: GameSystem[] }): Promise<void> => fetch(`${API_BASE_URL}/bulk-import`, {
+export const addGameSystem = async (system: Omit<GameSystem, 'id'>): Promise<GameSystem> => {
+  const response = await fetch(`${API_BASE_URL}/game-systems`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-}).then(res => { if(!res.ok) throw new Error('Failed to import')});
+    body: JSON.stringify(system),
+  });
+  return handleResponse<GameSystem>(response);
+};
+
+export const updateGameSystem = async (id: string, system: Partial<Omit<GameSystem, 'id'>>): Promise<GameSystem> => {
+    const response = await fetch(`${API_BASE_URL}/game-systems/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(system),
+    });
+    return handleResponse<GameSystem>(response);
+  };
+  
+export const deleteGameSystem = async (id: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/game-systems/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete game system');
+  }
+};
 
 
-/**
- * Fetches all initial data required for the application to start.
- * @returns A promise that resolves with the complete application state.
- */
-export const getInitialData = async () => {
-    // Using Promise.all to fetch all data in parallel for faster loading.
-    const [gameSystems, armies, models] = await Promise.all([
-        getGameSystems(),
-        getArmies(),
-        getModels(),
-    ]);
-    return { gameSystems, armies, models };
+// --- Army API calls ---
+
+export const getArmies = async (): Promise<Army[]> => {
+  const response = await fetch(`${API_BASE_URL}/armies`);
+  return handleResponse<Army[]>(response);
+};
+
+export const addArmy = async (army: Omit<Army, 'id'>): Promise<Army> => {
+    const response = await fetch(`${API_BASE_URL}/armies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(army),
+    });
+    return handleResponse<Army>(response);
+};
+  
+export const updateArmy = async (id: string, army: Partial<Omit<Army, 'id'>>): Promise<Army> => {
+    const response = await fetch(`${API_BASE_URL}/armies/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(army),
+    });
+    return handleResponse<Army>(response);
+};
+
+export const deleteArmy = async (id: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/armies/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete army');
+  }
+};
+
+
+// --- Model API calls ---
+
+export const getModels = async (): Promise<Model[]> => {
+  const response = await fetch(`${API_BASE_URL}/models`);
+  return handleResponse<Model[]>(response);
+};
+
+export const addModel = async (model: Omit<Model, 'id'>): Promise<Model> => {
+    const response = await fetch(`${API_BASE_URL}/models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(model),
+    });
+    return handleResponse<Model>(response);
+};
+
+export const updateModel = async (id: string, model: Partial<Omit<Model, 'id'>>): Promise<Model> => {
+    const response = await fetch(`${API_BASE_URL}/models/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(model),
+    });
+    return handleResponse<Model>(response);
+};
+
+export const deleteModel = async (id: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/models/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete model');
+  }
 };
