@@ -25,7 +25,7 @@ export const generateDescription = async (modelName: string, armyName: string, g
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Construct a detailed prompt to guide the AI in generating a relevant and thematic description.
-    const prompt = `Generate a short, flavorful, one-paragraph description for the tabletop miniature model "${modelName}" from the "${armyName}" army in the "${gameSystem}" universe. Focus on its role on the battlefield or its lore.`;
+    const prompt = `Generate a detailed and engaging description for the tabletop miniature model "${modelName}" from the "${armyName}" army in the "${gameSystem}" universe. The description should be two or three paragraphs. Start with its lore and background, then describe its typical role and capabilities on the battlefield. Conclude with a sentence that captures its essence or threat.`;
     
     // Call the Gemini API to generate content.
     const response = await ai.models.generateContent({

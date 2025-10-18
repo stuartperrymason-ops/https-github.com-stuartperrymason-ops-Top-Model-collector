@@ -10,6 +10,8 @@ import ModelCard from '../components/ModelCard';
 import ModelFormModal from '../components/ModelFormModal';
 import { PlusIcon, XIcon } from '../components/icons/Icons';
 import { Model } from '../types';
+import Papa from 'papaparse';
+
 
 const CollectionPage: React.FC = () => {
   const { models, gameSystems, armies, loading, error, bulkUpdateModels, bulkDeleteModels } = useData();
@@ -134,6 +136,32 @@ const CollectionPage: React.FC = () => {
     toggleBulkEditMode();
   };
 
+  const handleExportCsv = () => {
+    const dataToExport = filteredModels.map(model => {
+      const gameSystem = gameSystems.find(gs => gs.id === model.gameSystemId);
+      const army = armies.find(a => a.id === model.armyId);
+      return {
+        name: model.name,
+        'game system': gameSystem?.name || 'N/A',
+        army: army?.name || 'N/A',
+        points: model.points,
+        quantity: model.quantity,
+        status: model.status,
+      };
+    });
+
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'model_collection.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><p>Loading your collection...</p></div>;
@@ -147,7 +175,13 @@ const CollectionPage: React.FC = () => {
     <div className="container mx-auto pb-20"> {/* Padding bottom for bulk actions toolbar */}
       <header className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-bold text-white">My Collection</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-center">
+            <button
+             onClick={handleExportCsv}
+             className="px-4 py-2 font-semibold rounded-lg shadow-md transition duration-300 bg-surface hover:bg-gray-700 text-text-primary border border-border"
+           >
+             Export to CSV
+           </button>
            <button
              onClick={toggleBulkEditMode}
              className={`px-4 py-2 font-semibold rounded-lg shadow-md transition duration-300 ${isBulkEditMode ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-surface hover:bg-gray-700 text-text-primary border border-border'}`}

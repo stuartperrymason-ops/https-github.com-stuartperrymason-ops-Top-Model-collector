@@ -31,6 +31,7 @@ interface DataContextState {
   deleteModel: (id: string) => Promise<void>;
   bulkUpdateModels: (ids: string[], updates: Partial<Omit<Model, 'id'>>) => Promise<void>;
   bulkDeleteModels: (ids: string[]) => Promise<void>;
+  bulkAddModels: (models: Omit<Model, 'id'>[]) => Promise<void>;
 }
 
 // Create the context with a default undefined value.
@@ -56,7 +57,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
-    }, 3000);
+    }, 5000); // Increased timeout for potentially longer messages
   };
 
   // Memoized function to fetch all data.
@@ -194,6 +195,19 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   };
 
   // Bulk operations for Models
+  const bulkAddModels = async (modelsToAdd: Omit<Model, 'id'>[]) => {
+    try {
+      const addedModels = await Promise.all(
+        modelsToAdd.map(model => apiService.addModel(model))
+      );
+      setModels(prev => [...prev, ...addedModels]);
+      // Toast is handled on the page for more detailed feedback
+    } catch (err) {
+      console.error('Failed to bulk add models:', err);
+      addToast('An error occurred during bulk import.', 'error');
+    }
+  };
+  
   const bulkUpdateModels = async (ids: string[], updates: Partial<Omit<Model, 'id'>>) => {
     try {
       // In a real app, this would ideally be a single API call.
@@ -240,6 +254,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     addModel,
     updateModel,
     deleteModel,
+    bulkAddModels,
     bulkUpdateModels,
     bulkDeleteModels,
   };
