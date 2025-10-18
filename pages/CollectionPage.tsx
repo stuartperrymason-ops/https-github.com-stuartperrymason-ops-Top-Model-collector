@@ -8,7 +8,7 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import ModelCard from '../components/ModelCard';
 import ModelFormModal from '../components/ModelFormModal';
-import { PlusIcon } from '../components/icons/Icons';
+import { PlusIcon, XIcon } from '../components/icons/Icons';
 import { Model } from '../types';
 
 const CollectionPage: React.FC = () => {
@@ -25,6 +25,11 @@ const CollectionPage: React.FC = () => {
   const [isBulkEditMode, setIsBulkEditMode] = useState(false);
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<Model['status']>('unpainted');
+  
+  // State for points update modal
+  const [isPointsModalOpen, setIsPointsModalOpen] = useState(false);
+  const [newPoints, setNewPoints] = useState<string>('');
+
 
   const handleAddModelClick = () => {
     setSelectedModel(null);
@@ -96,18 +101,19 @@ const CollectionPage: React.FC = () => {
     toggleBulkEditMode();
   };
   
-  const handleBulkUpdatePoints = async () => {
-    const pointsStr = prompt('Enter the new point value for the selected models:');
-    if (pointsStr) {
-      const points = parseInt(pointsStr, 10);
-      if (!isNaN(points) && points >= 0) {
-        await bulkUpdateModels(selectedModelIds, { points });
-        toggleBulkEditMode();
-      } else {
-        alert('Invalid point value. Please enter a non-negative number.');
-      }
+  const handleConfirmUpdatePoints = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const points = parseInt(newPoints, 10);
+    if (!isNaN(points) && points >= 0) {
+      await bulkUpdateModels(selectedModelIds, { points });
+      setIsPointsModalOpen(false);
+      setNewPoints('');
+      toggleBulkEditMode();
+    } else {
+      alert('Invalid point value. Please enter a non-negative number.');
     }
   };
+
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><p>Loading your collection...</p></div>;
@@ -213,11 +219,47 @@ const CollectionPage: React.FC = () => {
                     <button onClick={handleBulkUpdateStatus} className="px-3 py-1.5 text-sm bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">Apply Status</button>
                   </div>
                   {/* Points update */}
-                  <button onClick={handleBulkUpdatePoints} className="px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition-colors">Update Points</button>
+                  <button onClick={() => setIsPointsModalOpen(true)} className="px-3 py-1.5 text-sm bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition-colors">Update Points</button>
                   {/* Delete */}
                   <button onClick={handleBulkDelete} className="px-3 py-1.5 text-sm bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Delete</button>
               </div>
           </div>
+      )}
+
+      {isPointsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
+          <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-sm border border-border">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Update Points</h3>
+              <button onClick={() => { setIsPointsModalOpen(false); setNewPoints(''); }} className="text-gray-400 hover:text-white">
+                <XIcon />
+              </button>
+            </div>
+            <form onSubmit={handleConfirmUpdatePoints}>
+              <p className="text-text-secondary mb-4">
+                Set a new point value for the {selectedModelIds.length} selected models.
+              </p>
+              <div>
+                <label htmlFor="points-bulk" className="block text-sm font-medium text-text-secondary mb-1">New Point Value</label>
+                <input 
+                  type="number" 
+                  name="points" 
+                  id="points-bulk" 
+                  value={newPoints} 
+                  onChange={(e) => setNewPoints(e.target.value)} 
+                  required 
+                  min="0"
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-4 pt-6">
+                <button type="button" onClick={() => { setIsPointsModalOpen(false); setNewPoints(''); }} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {isModalOpen && (

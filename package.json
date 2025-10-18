@@ -1,1 +1,17 @@
-full contents of package.json
+{
+  "name": "tabletop-model-collector",
+  "version": "1.0.0",
+  "description": "An application to store and manage information about models from various armies and tabletop gaming systems. Features include a detailed collection view, bulk CSV import/export, and settings to customize game systems and armies.",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0"
+  }
+}
