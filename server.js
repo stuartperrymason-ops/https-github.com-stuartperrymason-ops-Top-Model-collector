@@ -69,7 +69,7 @@ async function seedDatabase() {
                 description: 'The backbone of any Space Marine force, Primaris Intercessors are versatile and reliable infantry units.',
                 points: 20,
                 quantity: 10,
-                status: 'painted',
+                status: 'Ready to Game',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Intercessor',
             },
             {
@@ -79,7 +79,7 @@ async function seedDatabase() {
                 description: 'Ork Boyz are the rank-and-file infantry of an Ork army. What they lack in skill, they make up for in sheer numbers and enthusiasm for a good scrap.',
                 points: 8,
                 quantity: 20,
-                status: 'wip',
+                status: 'Primed',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Ork+Boy',
             }
         ]);

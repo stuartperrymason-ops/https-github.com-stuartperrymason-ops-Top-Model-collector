@@ -25,7 +25,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     description: '',
     points: 0,
     quantity: 1,
-    status: 'unpainted',
+    status: 'Purchased',
     imageUrl: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
@@ -42,7 +42,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
         description: '',
         points: 0,
         quantity: 1,
-        status: 'unpainted',
+        status: 'Purchased',
         imageUrl: '',
       });
     }
@@ -175,9 +175,12 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
           <div>
             <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">Painting Status</label>
             <select name="status" id="status" value={formData.status} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
-              <option value="unpainted">Unpainted</option>
-              <option value="wip">Work in Progress</option>
-              <option value="painted">Painted</option>
+              <option value="Purchased">Purchased</option>
+              <option value="Printed">Printed</option>
+              <option value="Primed">Primed</option>
+              <option value="Painted">Painted</option>
+              <option value="Based">Based</option>
+              <option value="Ready to Game">Ready to Game</option>
             </select>
           </div>
           

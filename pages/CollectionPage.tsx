@@ -26,7 +26,7 @@ const CollectionPage: React.FC = () => {
   // State for bulk actions
   const [isBulkEditMode, setIsBulkEditMode] = useState(false);
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
-  const [bulkStatus, setBulkStatus] = useState<Model['status']>('unpainted');
+  const [bulkStatus, setBulkStatus] = useState<Model['status']>('Purchased');
   
   // State for points update modal
   const [isPointsModalOpen, setIsPointsModalOpen] = useState(false);
@@ -266,9 +266,12 @@ const CollectionPage: React.FC = () => {
                         onChange={(e) => setBulkStatus(e.target.value as Model['status'])}
                         className="bg-background border border-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                        <option value="unpainted">Unpainted</option>
-                        <option value="wip">Work in Progress</option>
-                        <option value="painted">Painted</option>
+                        <option value="Purchased">Purchased</option>
+                        <option value="Printed">Printed</option>
+                        <option value="Primed">Primed</option>
+                        <option value="Painted">Painted</option>
+                        <option value="Based">Based</option>
+                        <option value="Ready to Game">Ready to Game</option>
                     </select>
                     <button onClick={handleBulkUpdateStatus} className="px-3 py-1.5 text-sm bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">Apply Status</button>
                   </div>

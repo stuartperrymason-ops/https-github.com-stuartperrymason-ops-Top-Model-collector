@@ -89,9 +89,12 @@ const BulkDataPage: React.FC = () => {
             // Validate and format model data
             const pointsNum = parseInt(points, 10);
             const quantityNum = parseInt(quantity, 10);
-            const modelStatus = status.trim().toLowerCase() as Model['status'];
+            
+            // Validate status (case-insensitive) and map to the correct casing
+            const validStatuses: Model['status'][] = ['Purchased', 'Printed', 'Primed', 'Painted', 'Based', 'Ready to Game'];
+            const formattedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
 
-            if (isNaN(pointsNum) || pointsNum < 0 || isNaN(quantityNum) || quantityNum < 1 || !['unpainted', 'wip', 'painted'].includes(modelStatus)) {
+            if (isNaN(pointsNum) || pointsNum < 0 || isNaN(quantityNum) || quantityNum < 1 || !formattedStatus) {
                 console.warn('Skipping row due to invalid data format:', row);
                 failedRows++;
                 continue;
@@ -103,7 +106,7 @@ const BulkDataPage: React.FC = () => {
                 armyId: army.id,
                 points: pointsNum,
                 quantity: quantityNum,
-                status: modelStatus,
+                status: formattedStatus,
                 description: '', // Default empty description
                 imageUrl: '',
             });
@@ -129,15 +132,20 @@ const BulkDataPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-white mb-6">Bulk Data Management</h1>
             <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                 <h2 className="text-2xl font-semibold text-white mb-4">Import from CSV</h2>
-                <p className="text-text-secondary mb-4">
-                    Import your model collection by uploading a CSV file. The file should contain the headers:
-                    <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">name</code>,
-                    <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">game system</code>,
-                    <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">army</code>,
-                    <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">points</code>,
-                    <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">quantity</code>, and
-                    <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code>.
-                </p>
+                <div className="text-text-secondary mb-4 space-y-2">
+                    <p>
+                        Import your model collection by uploading a CSV file. The file must contain the following headers:
+                        <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">name</code>,
+                        <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">game system</code>,
+                        <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">army</code>,
+                        <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">points</code>,
+                        <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">quantity</code>, and
+                        <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code>.
+                    </p>
+                    <p>
+                        The <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code> column must contain one of the following values (case-insensitive): Purchased, Printed, Primed, Painted, Based, Ready to Game.
+                    </p>
+                </div>
                 <p className="text-text-secondary mb-4">
                     Note: The 'game system' and 'army' names in your file must match existing entries in the Settings page exactly.
                 </p>

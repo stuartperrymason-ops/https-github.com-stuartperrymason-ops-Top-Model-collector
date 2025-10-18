@@ -31,13 +31,20 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
 
   const getStatusBadgeColor = (status: Model['status']) => {
     switch (status) {
-      case 'painted':
-        return 'bg-green-500 text-white';
-      case 'wip':
-        return 'bg-yellow-500 text-black';
-      case 'unpainted':
+      case 'Purchased':
         return 'bg-gray-500 text-white';
+      case 'Printed':
+        return 'bg-slate-500 text-white';
+      case 'Primed':
+        return 'bg-zinc-400 text-black';
+      case 'Painted':
+        return 'bg-yellow-500 text-black';
+      case 'Based':
+        return 'bg-amber-600 text-white';
+      case 'Ready to Game':
+        return 'bg-green-500 text-white';
       default:
+        // Fallback for any unexpected status
         return 'bg-gray-200 text-gray-800';
     }
   };
@@ -75,7 +82,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
         
         <div className="flex justify-between items-center mb-4">
             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(model.status)}`}>
-                {model.status.toUpperCase()}
+                {model.status}
             </span>
             <span className="text-lg font-bold text-primary">{model.points} pts</span>
         </div>

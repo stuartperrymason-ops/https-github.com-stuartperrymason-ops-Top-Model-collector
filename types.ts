@@ -26,7 +26,7 @@ export interface Model {
   description: string;
   points: number; // Point cost in the game
   quantity: number; // How many of this model the user owns
-  status: 'unpainted' | 'painted' | 'wip'; // Painting status
+  status: 'Purchased' | 'Printed' | 'Primed' | 'Painted' | 'Based' | 'Ready to Game'; // Painting status
   imageUrl?: string; // Optional URL for an image of the model
 }
 
