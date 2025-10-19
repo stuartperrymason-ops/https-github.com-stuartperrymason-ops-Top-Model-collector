@@ -27,24 +27,25 @@ This diagram shows the high-level architecture, from the user interface down to 
 
 ```mermaid
 graph TD
-    subgraph A[Frontend (Browser)]
-        A1[UI Components (Pages & Modals)] -- Calls functions --> B(DataContext Global State);
-        B -- Updates state & triggers re-render --> A1;
-        B -- Calls API methods --> C(apiService.ts);
+    subgraph Frontend[Frontend (Browser)]
+        UI[UI Components (Pages & Modals)] --> State[DataContext Global State]
+        State --> UI
+        State --> API[apiService.ts]
     end
 
-    subgraph Backend (Server)
-        D[Express Server (server.js)] -- CRUD operations --> E(MongoDB);
+    subgraph Backend[Backend (Server)]
+        Server[Express Server (server.js)] --> DB[MongoDB]
     end
 
-    C -- HTTP Requests (fetch) --> D;
-    D -- HTTP Responses (JSON) --> C;
+    API --> Server
+    Server --> API
 
-    style A1 fill:#8d99ae,stroke:#2b2d42,stroke-width:2px
-    style B fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
-    style C fill:#bde0fe,stroke:#2b2d42,stroke-width:2px
-    style D fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
-    style E fill:#a7c957,stroke:#2b2d42,stroke-width:2px
+    style UI fill:#8d99ae,stroke:#2b2d42,stroke-width:2px
+    style State fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
+    style API fill:#bde0fe,stroke:#2b2d42,stroke-width:2px
+    style Server fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
+    style DB fill:#a7c957,stroke:#2b2d42,stroke-width:2px
+
 ```
 
 ### 2. User Interaction: Adding a New Model
