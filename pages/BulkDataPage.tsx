@@ -84,16 +84,26 @@ const BulkDataPage: React.FC = () => {
             const { name, 'game system': gameSystemName, army: armyNamesRaw, quantity, status } = row;
             const paintingNotes = row['painting notes'];
 
-            if (!name || !gameSystemName || !armyNamesRaw || !quantity || !status) {
-                results.push({ row, data: null, status: 'ERROR', errorMessage: 'Row has missing required data.', import: false, rowIndex: index });
+            // Improved check for missing fields to provide better user feedback
+            const missingFields = [];
+            if (!name) missingFields.push('name');
+            if (!gameSystemName) missingFields.push('game system');
+            if (!armyNamesRaw) missingFields.push('army');
+            if (!quantity) missingFields.push('quantity');
+            if (!status) missingFields.push('status');
+            
+            if (missingFields.length > 0) {
+                results.push({ row, data: null, status: 'ERROR', errorMessage: `Missing required fields: ${missingFields.join(', ')}.`, import: false, rowIndex: index });
                 return;
             }
             
+            // Identify new game systems to be created
             const cleanGameSystemName = gameSystemName.trim();
             if (!gameSystems.some(gs => gs.name.trim().toLowerCase() === cleanGameSystemName.toLowerCase())) {
                 systemsToCreate.add(cleanGameSystemName);
             }
             
+            // Identify new armies to be created
             const armyNames = armyNamesRaw.split(',').map(n => n.trim());
             const foundArmyIdsInContext: string[] = [];
             
@@ -112,6 +122,7 @@ const BulkDataPage: React.FC = () => {
                 }
             });
 
+            // Validate quantity and status
             const quantityNum = parseInt(quantity, 10);
             const formattedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
 
@@ -124,6 +135,7 @@ const BulkDataPage: React.FC = () => {
                 return;
             }
             
+            // Check for duplicates against existing models
             const isDuplicate = models.some(m => 
                 m.name.trim().toLowerCase() === name.trim().toLowerCase() && 
                 m.armyIds.some(id => foundArmyIdsInContext.includes(id))
@@ -149,7 +161,8 @@ const BulkDataPage: React.FC = () => {
         setNewArmiesToCreate(finalNewArmies);
         setValidationResults(results);
 
-        if (finalNewSystems.length > 0 || finalNewArmies.length > 0 || results.some(r => r.status !== 'NEW' && r.status !== 'DUPLICATE' )) {
+        // **BUG FIX**: Ensure the review modal is shown if there are duplicates to review, even if no other issues exist.
+        if (finalNewSystems.length > 0 || finalNewArmies.length > 0 || results.some(r => r.status === 'ERROR' || r.status === 'DUPLICATE')) {
             setShowReviewModal(true);
         } else {
             finalizeImport(results, finalNewSystems, finalNewArmies);
@@ -173,12 +186,14 @@ const BulkDataPage: React.FC = () => {
         setIsImporting(true);
     
         try {
+            // Step 1: Create any new game systems found in the CSV.
             const createdSystems = (await Promise.all(
                 systemsToCreate.map(name => addGameSystem(name))
             )).filter((s): s is GameSystem => s !== undefined);
             
             const allGameSystems = [...gameSystems, ...createdSystems];
     
+            // Step 2: Create any new armies, linking them to their game system.
             const createdArmies = (await Promise.all(
                 armiesToCreate.map(async (army) => {
                     const gameSystem = allGameSystems.find(gs => gs.name.trim().toLowerCase() === army.gameSystemName.trim().toLowerCase());
@@ -191,6 +206,7 @@ const BulkDataPage: React.FC = () => {
             
             const allArmies = [...armies, ...createdArmies];
             
+            // Step 3: Prepare models for import by linking them to the correct IDs.
             const modelsToAdd: Omit<Model, 'id'>[] = [];
             let successCount = 0;
             let skippedDuplicatesCount = 0;
@@ -209,12 +225,14 @@ const BulkDataPage: React.FC = () => {
                 const { row, data } = result;
                 if (!data) return;
     
+                // Find the correct game system ID (from existing or newly created).
                 const gameSystem = allGameSystems.find(gs => gs.name.trim().toLowerCase() === row['game system'].trim().toLowerCase());
                 if (!gameSystem) {
                     finalErrors.push({ ...result, status: 'ERROR', errorMessage: `Failed to find/create game system: ${row['game system']}` });
                     return;
                 }
     
+                // Find the correct army IDs.
                 const armyNames = row.army.split(',').map(n => n.trim().toLowerCase());
                 const armyIds = allArmies
                     .filter(a => a.gameSystemId === gameSystem.id && armyNames.includes(a.name.trim().toLowerCase()))
@@ -229,6 +247,7 @@ const BulkDataPage: React.FC = () => {
                 successCount++;
             });
             
+            // Step 4: Perform the bulk import of the processed models.
             if (modelsToAdd.length > 0) {
                 await bulkAddModels(modelsToAdd);
             }

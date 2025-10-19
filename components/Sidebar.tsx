@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { HomeIcon, CollectionIcon, UploadIcon, CogIcon, MenuIcon, XIcon } from './icons/Icons';
+import { HomeIcon, CollectionIcon, UploadIcon, CogIcon, MenuIcon, XIcon, DashboardIcon } from './icons/Icons';
 
 const Sidebar: React.FC = () => {
   // State to manage the visibility of the mobile menu.
@@ -16,6 +16,7 @@ const Sidebar: React.FC = () => {
   const navLinks = [
     { to: '/', text: 'Welcome', icon: <HomeIcon /> },
     { to: '/collection', text: 'Collection', icon: <CollectionIcon /> },
+    { to: '/dashboard', text: 'Dashboard', icon: <DashboardIcon /> },
     { to: '/bulk', text: 'Bulk Data', icon: <UploadIcon /> },
     { to: '/settings', text: 'Settings', icon: <CogIcon /> },
   ];

@@ -9,6 +9,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import WelcomePage from './pages/WelcomePage';
 import CollectionPage from './pages/CollectionPage';
+import DashboardPage from './pages/DashboardPage';
 import BulkDataPage from './pages/BulkDataPage';
 import SettingsPage from './pages/SettingsPage';
 import { DataProvider } from './context/DataContext';
@@ -28,6 +29,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<WelcomePage />} />
               <Route path="/collection" element={<CollectionPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/bulk" element={<BulkDataPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
