@@ -87,7 +87,7 @@ This flowchart illustrates the logic behind the CSV import feature, from file pa
 graph TD
     A[Start] --> B[User selects CSV file];
     B --> C[Parse CSV using PapaParse];
-    C --> D[Validate each row (check for errors, find duplicates)];
+    C --> D[Validate each row check for errors, find duplicates];
     D --> E[Any new items, duplicates, or errors?];
     E -- No --> F[Finalize Import];
     E -- Yes --> G[Show Review Modal];
