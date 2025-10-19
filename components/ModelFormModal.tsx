@@ -26,13 +26,14 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     quantity: 1,
     status: 'Purchased',
     imageUrl: '',
+    paintingNotes: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (model) {
-      setFormData({ ...model, armyIds: model.armyIds || [] });
+      setFormData({ ...model, armyIds: model.armyIds || [], paintingNotes: model.paintingNotes || '' });
       setImagePreview(model.imageUrl || null);
     } else {
       // Reset form for new model
@@ -44,6 +45,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
         quantity: 1,
         status: 'Purchased',
         imageUrl: '',
+        paintingNotes: '',
       });
       setImagePreview(null);
     }
@@ -219,6 +221,11 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
                     {isGenerating ? <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div> : <SparklesIcon />}
                 </button>
             </div>
+          </div>
+          
+          <div>
+            <label htmlFor="paintingNotes" className="block text-sm font-medium text-text-secondary mb-1">Painting Notes</label>
+            <textarea name="paintingNotes" id="paintingNotes" value={formData.paintingNotes} onChange={handleChange} rows={3} placeholder="e.g., Base: Macragge Blue, Shade: Nuln Oil..." className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

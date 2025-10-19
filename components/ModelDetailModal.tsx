@@ -61,15 +61,15 @@ const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ isOpen, onClose, mo
                         <XIcon />
                     </button>
                 </div>
-                <div className="p-6 overflow-y-auto">
+                <div className="p-6 overflow-y-auto space-y-6">
                     {model.imageUrl ? (
-                        <img src={model.imageUrl} alt={model.name} className="w-full h-auto max-h-96 object-contain rounded-lg mb-6 bg-background" />
+                        <img src={model.imageUrl} alt={model.name} className="w-full h-auto max-h-96 object-contain rounded-lg bg-background" />
                     ) : (
-                        <div className="w-full h-64 bg-gray-700 flex items-center justify-center rounded-lg mb-6">
+                        <div className="w-full h-64 bg-gray-700 flex items-center justify-center rounded-lg">
                             <span className="text-text-secondary">No Image</span>
                         </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 text-center md:text-left">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
                         <div>
                             <p className="text-sm font-bold text-text-secondary uppercase tracking-wider">Game System</p>
                             <p className="text-lg">{gameSystem?.name || 'Unknown'}</p>
@@ -95,6 +95,14 @@ const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ isOpen, onClose, mo
                             {model.description || 'No description provided.'}
                         </p>
                     </div>
+                    {model.paintingNotes && (
+                         <div>
+                            <p className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Painting Notes</p>
+                            <p className="text-text-primary whitespace-pre-wrap leading-relaxed bg-background p-4 rounded-md">
+                                {model.paintingNotes}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

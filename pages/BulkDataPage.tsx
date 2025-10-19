@@ -16,6 +16,7 @@ type CsvRow = {
     army: string;
     quantity: string;
     status: string;
+    'painting notes'?: string;
 };
 
 interface ValidationResult {
@@ -81,9 +82,10 @@ const BulkDataPage: React.FC = () => {
             if (Object.values(row).every(val => val === null || val === '')) return;
             
             const { name, 'game system': gameSystemName, army: armyNamesRaw, quantity, status } = row;
+            const paintingNotes = row['painting notes'];
 
             if (!name || !gameSystemName || !armyNamesRaw || !quantity || !status) {
-                results.push({ row, data: null, status: 'ERROR', errorMessage: 'Row has missing data.', import: false, rowIndex: index });
+                results.push({ row, data: null, status: 'ERROR', errorMessage: 'Row has missing required data.', import: false, rowIndex: index });
                 return;
             }
             
@@ -135,6 +137,7 @@ const BulkDataPage: React.FC = () => {
                 status: formattedStatus!,
                 description: '',
                 imageUrl: '',
+                paintingNotes: paintingNotes || '',
             };
 
             results.push({ row, data: modelData, status: isDuplicate ? 'DUPLICATE' : 'NEW', import: true, rowIndex: index });
@@ -268,6 +271,9 @@ const BulkDataPage: React.FC = () => {
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">army</code>,
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">quantity</code>, and
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code>.
+                    </p>
+                    <p>
+                        You can also include an optional header: <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">painting notes</code>.
                     </p>
                     <p>
                         To assign multiple armies, separate their names with a comma in the <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">army</code> column (e.g., "Army A, Army B").

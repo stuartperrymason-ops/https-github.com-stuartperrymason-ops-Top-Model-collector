@@ -27,6 +27,7 @@ export interface Model {
   quantity: number; // How many of this model the user owns
   status: 'Purchased' | 'Printed' | 'Assembled' | 'Primed' | 'Painted' | 'Based' | 'Ready to Game'; // Painting status
   imageUrl?: string; // Optional URL for an image of the model
+  paintingNotes?: string; // Optional field for paint recipes, colors, etc.
 }
 
 // Represents a temporary notification message shown to the user.

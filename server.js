@@ -70,6 +70,7 @@ const seedDatabase = async () => {
                 quantity: 10,
                 status: 'Ready to Game',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Intercessor',
+                paintingNotes: 'Base: Macragge Blue\nShade: Nuln Oil\nHighlight: Calgar Blue',
             },
             {
                 name: 'Ork Boy',
@@ -79,6 +80,7 @@ const seedDatabase = async () => {
                 quantity: 20,
                 status: 'Primed',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Ork+Boy',
+                paintingNotes: '',
             },
             {
                 name: 'Wolverine',
@@ -88,6 +90,7 @@ const seedDatabase = async () => {
                 quantity: 1,
                 status: 'Painted',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Wolverine',
+                paintingNotes: 'Suit: Averland Sunset\nStripes: Abaddon Black\nClaws: Leadbelcher',
             }
         ]);
 
@@ -237,7 +240,7 @@ app.get('/api/models', async (req, res) => {
 });
 
 app.post('/api/models', async (req, res) => {
-    const { name, armyIds, gameSystemId, description, quantity, status, imageUrl } = req.body;
+    const { name, armyIds, gameSystemId, description, quantity, status, imageUrl, paintingNotes } = req.body;
     const newModelData = {
         name,
         armyIds: armyIds.map(id => toMongoId(id)),
@@ -246,6 +249,7 @@ app.post('/api/models', async (req, res) => {
         quantity,
         status,
         imageUrl,
+        paintingNotes,
     };
     const result = await modelsCollection.insertOne(newModelData);
     const newDoc = await modelsCollection.findOne({_id: result.insertedId});
