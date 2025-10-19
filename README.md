@@ -27,9 +27,9 @@ This diagram shows the high-level architecture, from the user interface down to 
 
 ```mermaid
 graph TD
-    subgraph A [Frontend (Browser)]
-        A[UI Components (Pages & Modals)] -- Calls functions --> B(DataContext Global State);
-        B -- Updates state & triggers re-render --> A;
+    subgraph A[Frontend (Browser)]
+        A1[UI Components (Pages & Modals)] -- Calls functions --> B(DataContext Global State);
+        B -- Updates state & triggers re-render --> A1;
         B -- Calls API methods --> C(apiService.ts);
     end
 
