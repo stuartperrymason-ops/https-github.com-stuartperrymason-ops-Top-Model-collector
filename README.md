@@ -40,7 +40,7 @@ graph TD
     C -- HTTP Requests (fetch) --> D;
     D -- HTTP Responses (JSON) --> C;
 
-    style A fill:#8d99ae,stroke:#2b2d42,stroke-width:2px
+    style A1 fill:#8d99ae,stroke:#2b2d42,stroke-width:2px
     style B fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
     style C fill:#bde0fe,stroke:#2b2d42,stroke-width:2px
     style D fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
