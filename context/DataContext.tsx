@@ -1,21 +1,26 @@
 /**
  * @file DataContext.tsx
  * @description Provides a global state context for managing game systems, armies, and models data.
- * It fetches initial data and offers functions to interact with the API for CRUD operations.
+ * It centralizes data fetching and all CRUD (Create, Read, Update, Delete) operations.
+ * This program was written by Stuart Mason October 2025.
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { GameSystem, Army, Model, ToastMessage } from '../types';
 import * as apiService from '../services/apiService';
 
-// Define the shape of the context state.
+// Define the shape of the context state. This interface describes all the data
+// and functions that will be made available to components consuming this context.
 interface DataContextState {
+  // State slices
   gameSystems: GameSystem[];
   armies: Army[];
   models: Model[];
-  loading: boolean;
-  error: string | null;
-  toasts: ToastMessage[];
+  loading: boolean; // Indicates if initial data is being fetched.
+  error: string | null; // Stores any critical error messages.
+  toasts: ToastMessage[]; // An array of active toast notifications.
+  
+  // Functions to interact with the state
   addToast: (message: string, type: 'success' | 'error') => void;
   // Game System functions
   addGameSystem: (name: string) => Promise<GameSystem | undefined>;
@@ -29,21 +34,24 @@ interface DataContextState {
   addModel: (model: Omit<Model, 'id'>) => Promise<void>;
   updateModel: (id: string, model: Partial<Omit<Model, 'id'>>) => Promise<void>;
   deleteModel: (id: string) => Promise<void>;
+  // Bulk Model functions
   bulkUpdateModels: (ids: string[], updates: Partial<Omit<Model, 'id'>>) => Promise<void>;
   bulkDeleteModels: (ids: string[]) => Promise<void>;
   bulkAddModels: (models: Omit<Model, 'id'>[]) => Promise<void>;
 }
 
-// Create the context with a default undefined value.
+// Create the context with a default value of `undefined`.
+// The actual value will be provided by the DataProvider component.
 const DataContext = createContext<DataContextState | undefined>(undefined);
 
-// Define props for the provider component.
+// Define props for the provider component, which will accept children to render.
 interface DataProviderProps {
   children: ReactNode;
 }
 
 // The provider component that will wrap the application.
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
+  // State management using React's useState hook for all global data.
   const [gameSystems, setGameSystems] = useState<GameSystem[]>([]);
   const [armies, setArmies] = useState<Army[]>([]);
   const [models, setModels] = useState<Model[]>([]);
@@ -51,47 +59,61 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Function to add a toast message.
+  // Function to add a toast message to the queue.
+  // It automatically removes the toast after a 5-second timeout.
   const addToast = (message: string, type: 'success' | 'error') => {
-    const id = Date.now();
+    const id = Date.now(); // Simple unique ID
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
+      // Use a functional update to ensure we're filtering the latest state.
       setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
-    }, 5000); // Increased timeout for potentially longer messages
+    }, 5000);
   };
 
-  // Memoized function to fetch all data.
+  // Memoized function to fetch all initial data from the API.
+  // `useCallback` ensures this function is not recreated on every render,
+  // which is important for performance and preventing unnecessary effects.
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      // Use Promise.all to fetch all data concurrently for faster loading.
       const [systems, armyData, modelData] = await Promise.all([
         apiService.getGameSystems(),
         apiService.getArmies(),
         apiService.getModels(),
       ]);
+      // Update state with the fetched data.
       setGameSystems(systems);
       setArmies(armyData);
       setModels(modelData);
     } catch (err) {
-      setError('Failed to load data. Please try refreshing the page.');
+      const errorMessage = 'Failed to load data. Please try refreshing the page.';
+      setError(errorMessage);
       console.error(err);
       addToast('Failed to load data.', 'error');
     } finally {
+      // Ensure loading is set to false even if an error occurs.
       setLoading(false);
     }
-  }, []);
+  }, []); // Empty dependency array means this function is created only once.
 
-  // Fetch data on component mount.
+  // The useEffect hook runs after the component mounts.
+  // It calls `fetchData` to load the application's initial state.
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData]); // The effect depends on `fetchData`.
 
-  // CRUD operations for Game Systems
+  // --- CRUD operations for Game Systems ---
+  // Each function follows a similar pattern:
+  // 1. Make an API call.
+  // 2. On success, update the local state to reflect the change immediately.
+  // 3. Show a success or error toast to the user.
+  // 4. Handle any errors gracefully.
   const addGameSystem = async (name: string): Promise<GameSystem | undefined> => {
     try {
       const newSystem = await apiService.addGameSystem({ name });
-      setGameSystems(prev => [...prev, newSystem]);
+      setGameSystems(prev => [...prev, newSystem]); // Optimistic update
       addToast('Game system added successfully!', 'success');
       return newSystem;
     } catch (err) {
@@ -115,18 +137,19 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const deleteGameSystem = async (id: string) => {
     try {
       await apiService.deleteGameSystem(id);
+      // Remove the deleted system and any associated armies/models from local state.
       setGameSystems(prev => prev.filter(s => s.id !== id));
-      // Also delete associated armies and models
       setArmies(prev => prev.filter(a => a.gameSystemId !== id));
       setModels(prev => prev.filter(m => m.gameSystemId !== id));
       addToast('Game system deleted successfully!', 'success');
-    } catch (err) {
+    } catch (err)
+ {
       console.error('Failed to delete game system:', err);
       addToast('Failed to delete game system.', 'error');
     }
   };
 
-  // CRUD operations for Armies
+  // --- CRUD operations for Armies ---
   const addArmy = async (name: string, gameSystemId: string): Promise<Army | undefined> => {
     try {
       const newArmy = await apiService.addArmy({ name, gameSystemId });
@@ -155,7 +178,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     try {
       await apiService.deleteArmy(id);
       setArmies(prev => prev.filter(a => a.id !== id));
-      // Also disassociate models from the deleted army
+      // When an army is deleted, we must also remove its ID from any models associated with it.
       setModels(prev =>
         prev.map(model => {
           if (model.armyIds.includes(id)) {
@@ -171,7 +194,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
 
-  // CRUD operations for Models
+  // --- CRUD operations for Models ---
   const addModel = async (model: Omit<Model, 'id'>) => {
     try {
       const newModel = await apiService.addModel(model);
@@ -205,14 +228,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
 
-  // Bulk operations for Models
+  // --- Bulk operations for Models ---
   const bulkAddModels = async (modelsToAdd: Omit<Model, 'id'>[]) => {
     try {
+      // The API service calls `addModel` for each item. In a real-world scenario,
+      // this would ideally be a single API endpoint that accepts an array of models.
       const addedModels = await Promise.all(
         modelsToAdd.map(model => apiService.addModel(model))
       );
       setModels(prev => [...prev, ...addedModels]);
-      // Toast is handled on the page for more detailed feedback
+      // Toast notifications are handled on the BulkDataPage for more detailed feedback.
     } catch (err) {
       console.error('Failed to bulk add models:', err);
       addToast('An error occurred during bulk import.', 'error');
@@ -221,11 +246,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   
   const bulkUpdateModels = async (ids: string[], updates: Partial<Omit<Model, 'id'>>) => {
     try {
-      // In a real app, this would ideally be a single API call.
-      // For our mock server, we loop and call the single update endpoint.
+      // In a real app, this would be a single API call like `PATCH /models` with a list of IDs.
+      // For our mock server, we loop and call the single update endpoint for each ID.
       await Promise.all(ids.map(id => apiService.updateModel(id, updates)));
       
-      // Update local state in one go for better performance.
+      // Update local state in one go for better performance and to avoid multiple re-renders.
       setModels(prev =>
         prev.map(m => (ids.includes(m.id) ? { ...m, ...updates, id: m.id } : m))
       );
@@ -247,7 +272,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
 
-  // Value provided to consuming components.
+  // The 'value' object bundles all state and functions to be provided to consuming components.
   const value = {
     gameSystems,
     armies,
@@ -270,10 +295,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     bulkDeleteModels,
   };
 
+  // The DataContext.Provider makes the 'value' object available to all child components.
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// Custom hook to use the data context.
+// Custom hook to simplify the use of the data context.
+// This hook provides a clean way for components to access the context's value
+// and also includes an error check to ensure it's used within a DataProvider.
 export const useData = () => {
   const context = useContext(DataContext);
   if (context === undefined) {

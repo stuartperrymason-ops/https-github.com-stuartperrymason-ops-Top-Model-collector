@@ -1,13 +1,16 @@
 /**
  * @file DashboardPage.tsx
- * @description This page provides a visual dashboard of the model collection's status.
+ * @description This page provides a visual dashboard of the model collection's status,
+ * showing overall progress and breakdowns by game system and army.
+ * This program was written by Stuart Mason October 2025.
  */
 
 import React, { useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Model } from '../types';
 
-// Centralized configuration for statuses to ensure consistency in color, display order, and text contrast.
+// Centralized configuration for statuses. This object makes it easy to manage the color,
+// display order, and text contrast for each status type, ensuring consistency across the UI.
 const statusConfig: { [key in Model['status']]: { color: string; order: number; textColor: string; } } = {
     'Ready to Game': { color: 'bg-green-500', order: 1, textColor: 'text-white' },
     'Based': { color: 'bg-amber-600', order: 2, textColor: 'text-white' },
@@ -20,44 +23,49 @@ const statusConfig: { [key in Model['status']]: { color: string; order: number; 
 
 
 const DashboardPage: React.FC = () => {
+    // Fetch all necessary data from the global context.
     const { models, gameSystems, armies, loading, error } = useData();
 
-    // Memoize the calculation of status breakdown to prevent re-computation on every render.
+    // Memoize the calculation of the overall status breakdown. `useMemo` is crucial here for performance,
+    // as it prevents this potentially expensive calculation from re-running on every render,
+    // only recalculating when the `models` array changes.
     const statusBreakdown = useMemo(() => {
         if (models.length === 0) return [];
         
-        // Count the number of models for each status.
+        // Step 1: Count the number of models for each status using `reduce`.
         const counts = models.reduce((acc, model) => {
             acc[model.status] = (acc[model.status] || 0) + 1;
             return acc;
         }, {} as { [key in Model['status']]: number });
         
-        // Map the counts to a more usable format for rendering.
+        // Step 2: Map the counts to a more usable format for rendering, including percentages and style info.
         return Object.entries(counts)
             .map(([status, count]) => ({
                 status: status as Model['status'],
                 count,
                 percentage: (count / models.length) * 100,
-                ...statusConfig[status as Model['status']],
+                ...statusConfig[status as Model['status']], // Merge in color and order from the config.
             }))
-            .sort((a, b) => a.order - b.order); // Sort based on the defined order for consistent display.
+            .sort((a, b) => a.order - b.order); // Sort based on the defined order for a consistent display.
 
     }, [models]);
     
-    // Memoize progress calculation by game system
+    // Memoize the calculation of "Ready to Game" progress for each game system.
     const gameSystemProgress = useMemo(() => {
         return gameSystems.map(system => {
+            // Filter models belonging to the current system.
             const systemModels = models.filter(model => model.gameSystemId === system.id);
             const totalModels = systemModels.length;
-            if (totalModels === 0) return null;
+            if (totalModels === 0) return null; // Skip systems with no models.
             
+            // Calculate how many models are "Ready to Game".
             const readyModels = systemModels.filter(model => model.status === 'Ready to Game').length;
             const percentage = (readyModels / totalModels) * 100;
             return { name: system.name, totalModels, readyModels, percentage };
-        }).filter(Boolean); // Remove null entries
+        }).filter(Boolean); // `filter(Boolean)` is a concise way to remove null entries.
     }, [models, gameSystems]);
 
-    // Memoize progress calculation by army
+    // Memoize the calculation of "Ready to Game" progress for each army.
     const armyProgress = useMemo(() => {
         return armies.map(army => {
             const armyModels = models.filter(model => model.armyIds.includes(army.id));
@@ -68,13 +76,15 @@ const DashboardPage: React.FC = () => {
             const percentage = (readyModels / totalModels) * 100;
             const gameSystemName = gameSystems.find(gs => gs.id === army.gameSystemId)?.name || 'Unknown';
             return { name: army.name, gameSystemName, totalModels, readyModels, percentage };
-        }).filter(Boolean); // Remove null entries
+        }).filter(Boolean);
     }, [models, armies, gameSystems]);
 
+    // Show a loading message while data is being fetched.
     if (loading) {
         return <div className="flex justify-center items-center h-full"><p>Loading dashboard...</p></div>;
     }
 
+    // Show an error message if data fetching failed.
     if (error) {
         return <div className="flex justify-center items-center h-full"><p className="text-red-500">{error}</p></div>;
     }
@@ -83,15 +93,18 @@ const DashboardPage: React.FC = () => {
         <div className="container mx-auto">
             <h1 className="text-3xl font-bold text-white mb-6">Collection Dashboard</h1>
             
+            {/* Conditionally render the dashboard content only if there are models to display. */}
             {models.length > 0 ? (
                 <>
+                 {/* Overall Progress Card */}
                  <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold text-white">Overall Painting Progress</h2>
                         <span className="text-2xl font-bold text-primary">{models.length} Total Models</span>
                     </div>
 
-                    {/* The main status bar */}
+                    {/* The main status bar is a flex container. Each status is a div whose width
+                        is set by its percentage of the total, creating a stacked progress bar effect. */}
                     <div className="w-full bg-background rounded-full h-8 flex overflow-hidden border border-border my-4" role="progressbar" aria-valuenow={statusBreakdown.find(s => s.status === 'Ready to Game')?.percentage || 0} aria-valuemin={0} aria-valuemax={100}>
                         {statusBreakdown.map(({ status, percentage, color }) => (
                             <div
@@ -103,7 +116,7 @@ const DashboardPage: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Legend */}
+                    {/* Legend for the status bar */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
                         {statusBreakdown.map(({ status, count, percentage, color }) => (
                             <div key={status} className="flex items-center">
@@ -117,8 +130,9 @@ const DashboardPage: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Grid for breakdown cards */}
                 <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Progress by Game System */}
+                    {/* Progress by Game System Card */}
                     <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                         <h2 className="text-xl font-semibold text-white mb-4">Progress by Game System</h2>
                         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
@@ -135,7 +149,7 @@ const DashboardPage: React.FC = () => {
                             ))}
                         </div>
                     </div>
-                    {/* Progress by Army */}
+                    {/* Progress by Army Card */}
                     <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                         <h2 className="text-xl font-semibold text-white mb-4">Progress by Army</h2>
                          <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
@@ -158,6 +172,7 @@ const DashboardPage: React.FC = () => {
                 </div>
                 </>
             ) : (
+                // Display a message if there are no models in the collection.
                 <div className="text-center py-16 bg-surface rounded-lg">
                     <p className="text-xl text-text-secondary">No models in your collection yet.</p>
                     <p className="text-text-secondary">Add some models to see your dashboard!</p>

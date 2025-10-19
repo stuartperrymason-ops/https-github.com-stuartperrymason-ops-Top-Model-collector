@@ -3,6 +3,7 @@
  * @description The main HTML file that serves as the entry point for the web application.
  * It sets up the basic document structure, includes necessary external libraries like Tailwind CSS for styling,
  * defines a dark theme, and specifies the root element for the React app.
+ * This program was written by Stuart Mason October 2025.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -15,7 +16,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!--
       Tailwind CSS configuration script.
-      This configures a dark theme with a custom color palette for a consistent look and feel.
+      This allows for customizing the default Tailwind theme directly in the HTML.
+      Here, we're enabling dark mode via the 'class' strategy and extending the theme
+      with a custom color palette for a consistent look and feel across the application.
     -->
     <script>
       tailwind.config = {
@@ -35,6 +38,12 @@
         },
       }
     </script>
+<!--
+  The import map is a modern browser feature that allows for mapping module specifiers
+  to specific URLs. This avoids the need for complex build tool configurations for module resolution,
+  allowing us to use bare module specifiers (e.g., "react") directly in our JavaScript/TypeScript files.
+  These URLs point to a CDN, which is an efficient way to load common libraries.
+-->
 <script type="importmap">
 {
   "imports": {
@@ -53,7 +62,7 @@
   <body class="bg-background text-text-primary">
     <!-- The root container where the React application will be mounted. -->
     <div id="root"></div>
-    <!-- The main script for the application, loaded as a module. -->
+    <!-- The main script for the application, loaded as a module to enable ES6 module syntax (import/export). -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

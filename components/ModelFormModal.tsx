@@ -1,7 +1,9 @@
 /**
  * @file ModelFormModal.tsx
  * @description A modal dialog with a form for creating or editing a model.
- * It uses the DataContext to perform add/update operations and for populating dropdowns.
+ * It uses the DataContext for data operations and populating dropdowns, and integrates
+ * with the Gemini service to generate model descriptions.
+ * This program was written by Stuart Mason October 2025.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -10,14 +12,18 @@ import { useData } from '../context/DataContext';
 import { generateDescription } from '../services/geminiService';
 import { SparklesIcon, XIcon } from './icons/Icons';
 
+// Define the props that this component accepts.
 interface ModelFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  model: Model | null; // Pass model for editing, null for adding
+  isOpen: boolean; // Controls the visibility of the modal.
+  onClose: () => void; // Callback function to close the modal.
+  model: Model | null; // Pass a model object for editing, or null for creating a new model.
 }
 
 const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model }) => {
+  // Access global data and functions from the DataContext.
   const { gameSystems, armies, models, addModel, updateModel } = useData();
+  
+  // State to hold the form data. Omit<'id'> is used because the ID is not part of the form.
   const [formData, setFormData] = useState<Omit<Model, 'id'>>({
     name: '',
     armyIds: [],
@@ -28,15 +34,22 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     imageUrl: '',
     paintingNotes: '',
   });
+  
+  // State to track if the AI description is currently being generated.
   const [isGenerating, setIsGenerating] = useState(false);
+  // State to hold the base64 string for the image preview.
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  // The useEffect hook runs when the `model` or `isOpen` prop changes.
   useEffect(() => {
     if (model) {
+      // If a model is passed, it means we are in "edit" mode.
+      // Populate the form with the existing model's data.
       setFormData({ ...model, armyIds: model.armyIds || [], paintingNotes: model.paintingNotes || '' });
       setImagePreview(model.imageUrl || null);
     } else {
-      // Reset form for new model
+      // If no model is passed, we are in "add" mode.
+      // Reset the form to its default empty state.
       setFormData({
         name: '',
         armyIds: [],
@@ -49,27 +62,35 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
       });
       setImagePreview(null);
     }
-  }, [model, isOpen]);
+  }, [model, isOpen]); // Rerun this effect if the model prop changes or the modal is reopened.
 
+  // Memoize the calculation of available armies. This list is filtered based on the selected
+  // game system and only recalculates when `armies` or `formData.gameSystemId` changes.
   const availableArmies = useMemo(() => {
     if (!formData.gameSystemId) return [];
     return armies.filter(army => army.gameSystemId === formData.gameSystemId);
   }, [armies, formData.gameSystemId]);
   
-  // Effect to reset armyIds if gameSystemId changes
+  // This effect ensures that if the user changes the game system, the selected armies are cleared.
+  // This prevents a model from being accidentally assigned to an army from a different game system.
   useEffect(() => {
     if (formData.gameSystemId) {
         setFormData(prev => ({ ...prev, armyIds: [] }));
     }
   }, [formData.gameSystemId]);
 
+  // A generic change handler for most form inputs (text, textarea, select).
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    // Update the corresponding field in the formData state.
+    // For 'quantity', ensure the value is parsed as an integer.
     setFormData(prev => ({ ...prev, [name]: name === 'quantity' ? parseInt(value, 10) || 0 : value }));
   };
 
+  // A specific handler for the army checkboxes, as it manages an array of IDs.
   const handleArmyChange = (armyId: string) => {
     setFormData(prev => {
+        // Toggle the presence of the armyId in the array.
         const newArmyIds = prev.armyIds.includes(armyId)
             ? prev.armyIds.filter(id => id !== armyId)
             : [...prev.armyIds, armyId];
@@ -77,14 +98,16 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     });
   };
 
+  // Handler for the image file input.
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Check file size (e.g., limit to 2MB)
-      if (file.size > 2 * 1024 * 1024) {
+      // Basic validation for file size to prevent large uploads.
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
         alert('File is too large. Please select an image under 2MB.');
         return;
       }
+      // Use FileReader to convert the image to a base64 string for storage and preview.
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
@@ -95,71 +118,79 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     }
   };
 
+  // Function to remove the selected image.
   const removeImage = () => {
     setFormData(prev => ({ ...prev, imageUrl: '' }));
     setImagePreview(null);
+    // Also reset the file input element itself.
     const fileInput = document.getElementById('imageUpload') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
     }
   };
 
-
+  // Async handler to call the Gemini service for AI-powered description generation.
   const handleGenerateDescription = async () => {
+    // Ensure required fields are filled out first to provide context to the AI.
     if (!formData.name || formData.armyIds.length === 0 || !formData.gameSystemId) {
         alert("Please select a Game System, at least one Army, and enter a Model Name first.");
         return;
     }
-    setIsGenerating(true);
+    setIsGenerating(true); // Set loading state for the button.
     try {
+        // Resolve IDs to names to create a meaningful prompt.
         const armyName = armies.find(a => a.id === formData.armyIds[0])?.name || '';
         const gameSystemName = gameSystems.find(gs => gs.id === formData.gameSystemId)?.name || '';
         const desc = await generateDescription(formData.name, armyName, gameSystemName);
+        // Update the form state with the generated description.
         setFormData(prev => ({ ...prev, description: desc }));
     } catch (error) {
         console.error("Failed to generate description:", error);
         alert("There was an error generating the description.");
     } finally {
-        setIsGenerating(false);
+        setIsGenerating(false); // Reset loading state.
     }
   };
 
-
+  // Handler for the final form submission.
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission behavior.
 
+    // Validation: ensure at least one army is selected.
     if (formData.armyIds.length === 0) {
         alert("Please select at least one army for the model.");
         return;
     }
     
-    // Check for duplicates only when creating a new model
-    if (!model) {
+    // Check for duplicate models when creating a new one.
+    if (!model) { // This check only runs in "add" mode.
       const isDuplicate = models.some(
         m => m.name.trim().toLowerCase() === formData.name.trim().toLowerCase() && 
              m.armyIds.some(id => formData.armyIds.includes(id))
       );
 
       if (isDuplicate) {
+        // Ask the user for confirmation if a potential duplicate is found.
         if (!window.confirm(`A model named "${formData.name.trim()}" already exists in one of the selected armies. Do you want to add it anyway?`)) {
-          return; // User clicked 'Cancel', so we stop the submission.
+          return; // Stop submission if user cancels.
         }
       }
     }
     
+    // Call the appropriate function from the context based on whether we are editing or adding.
     if (model) {
-      // Update existing model
       await updateModel(model.id, formData);
     } else {
-      // Add new model
       await addModel(formData);
     }
-    onClose();
+    onClose(); // Close the modal on successful submission.
   };
 
+  // If the modal is not open, render nothing.
   if (!isOpen) return null;
 
   return (
+    // The modal container with a semi-transparent background overlay.
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
       <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-border">
         <div className="flex justify-between items-center mb-4">
@@ -169,6 +200,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
             </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form fields */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">Model Name</label>
             <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
@@ -185,6 +217,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Armies</label>
               <div className="bg-background border border-border rounded-md p-3 h-24 overflow-y-auto space-y-2">
+                {/* Render checkboxes for the armies available for the selected game system. */}
                 {availableArmies.length > 0 ? availableArmies.map(army => (
                   <div key={army.id} className="flex items-center">
                     <input
@@ -211,6 +244,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
             <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">Description</label>
             <div className="relative">
                 <textarea name="description" id="description" value={formData.description} onChange={handleChange} rows={4} className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary pr-10"></textarea>
+                {/* AI generation button, positioned absolutely within the textarea container. */}
                 <button
                     type="button"
                     onClick={handleGenerateDescription}
@@ -250,6 +284,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">Model Image</label>
             <div className="mt-1 flex items-center gap-4 p-3 bg-background border border-border rounded-md">
+              {/* Show the image preview or a placeholder. */}
               {imagePreview ? (
                 <img src={imagePreview} alt="Model Preview" className="w-20 h-20 object-cover rounded-md bg-background" />
               ) : (
@@ -258,6 +293,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
                 </div>
               )}
               <div className="flex-grow">
+                {/* The label acts as the button to trigger the hidden file input. */}
                 <label htmlFor="imageUpload" className="cursor-pointer bg-primary text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-indigo-500 transition-colors">
                   Choose Image
                 </label>

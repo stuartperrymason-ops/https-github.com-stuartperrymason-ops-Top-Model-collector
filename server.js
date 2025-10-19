@@ -2,7 +2,9 @@
  * @file server.js
  * @description Backend Express server for the ModelForge application.
  * Connects to a MongoDB database and provides API endpoints for CRUD operations.
+ * This program was written by Stuart Mason October 2025.
  */
+// Load environment variables from a .env file into process.env
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -11,22 +13,26 @@ const { MongoClient, ObjectId } = require('mongodb');
 const app = express();
 const PORT = 3001;
 
-// MongoDB connection settings
+// MongoDB connection settings, read from environment variables with sensible defaults.
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
 const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
 const client = new MongoClient(MONGODB_URI);
 
+// Global variables to hold references to the database and collections once connected.
 let db;
 let gameSystemsCollection;
 let armiesCollection;
 let modelsCollection;
 
-// Middleware
+// --- Middleware ---
+// `cors()` enables Cross-Origin Resource Sharing, allowing the frontend (on a different port) to make requests to this server.
 app.use(cors());
+// `express.json()` is a body-parser that parses incoming request bodies with JSON payloads.
 app.use(express.json());
 
 /**
- * Seeds the database with initial data if it's empty.
+ * Seeds the database with initial sample data if it's empty.
+ * This is useful for development and demonstration purposes.
  */
 const seedDatabase = async () => {
     try {
@@ -38,16 +44,18 @@ const seedDatabase = async () => {
 
         console.log('Seeding database with initial data...');
 
-        // Game Systems
+        // --- Game Systems ---
         const wh40k = await gameSystemsCollection.insertOne({ name: 'Warhammer 40,000' });
         const aos = await gameSystemsCollection.insertOne({ name: 'Age of Sigmar' });
         const mcp = await gameSystemsCollection.insertOne({ name: 'Marvel Crisis Protocol' });
 
+        // Store the inserted IDs for creating relationships.
         const wh40kId = wh40k.insertedId;
         const aosId = aos.insertedId;
         const mcpId = mcp.insertedId;
 
-        // Armies
+        // --- Armies ---
+        // Note how gameSystemId is used to link an army to its game system.
         const sm = await armiesCollection.insertOne({ name: 'Space Marines', gameSystemId: wh40kId });
         const orks = await armiesCollection.insertOne({ name: 'Orks', gameSystemId: wh40kId });
         await armiesCollection.insertOne({ name: 'Stormcast Eternals', gameSystemId: aosId });
@@ -60,7 +68,8 @@ const seedDatabase = async () => {
         const xmenId = xmen.insertedId;
 
 
-        // Models
+        // --- Models ---
+        // An example of a model belonging to multiple armies (Wolverine).
         await modelsCollection.insertMany([
             {
                 name: 'Primaris Intercessor',
@@ -102,53 +111,58 @@ const seedDatabase = async () => {
 };
 
 /**
- * Connects to MongoDB and starts the Express server.
+ * The main function that connects to MongoDB and starts the Express server.
  */
 async function main() {
     try {
         await client.connect();
         console.log('Connected successfully to MongoDB');
         db = client.db(DB_NAME);
+        // Get references to our collections.
         gameSystemsCollection = db.collection('game_systems');
         armiesCollection = db.collection('armies');
         modelsCollection = db.collection('models');
 
-        // Seed database if empty
+        // Seed the database with initial data if it's empty.
         await seedDatabase();
 
+        // Start listening for incoming HTTP requests.
         app.listen(PORT, () => {
             console.log(`Server running on http://localhost:${PORT}`);
         });
 
     } catch (e) {
         console.error('Could not connect to MongoDB', e);
-        process.exit(1);
+        process.exit(1); // Exit the process if DB connection fails.
     }
 }
 
-// --- API Helper ---
-// Helper to convert _id to id for client-side consistency
+// --- API Helper Functions ---
+// MongoDB uses an `_id` field with an ObjectId. The frontend expects a simple `id` string.
+// This helper converts the MongoDB document format to the format expected by the client.
 const fromMongo = (doc) => {
     if (!doc) return doc;
     const { _id, ...rest } = doc;
     return { id: _id.toHexString(), ...rest };
 };
 
+// Converts a string ID from the client back into a MongoDB ObjectId for database queries.
 const toMongoId = (id) => new ObjectId(id);
 
 // --- API Endpoints ---
+// Each endpoint corresponds to a CRUD operation for a specific resource.
 
-// Game Systems
+// --- Game Systems Endpoints ---
 app.get('/api/game-systems', async (req, res) => {
     const systems = await gameSystemsCollection.find({}).toArray();
-    res.json(systems.map(fromMongo));
+    res.json(systems.map(fromMongo)); // Convert all documents before sending.
 });
 
 app.post('/api/game-systems', async (req, res) => {
     const { name } = req.body;
     const result = await gameSystemsCollection.insertOne({ name });
     const newSystem = { id: result.insertedId.toHexString(), name };
-    res.status(201).json(newSystem);
+    res.status(201).json(newSystem); // 201 Created status
 });
 
 app.put('/api/game-systems/:id', async (req, res) => {
@@ -157,7 +171,7 @@ app.put('/api/game-systems/:id', async (req, res) => {
     const result = await gameSystemsCollection.findOneAndUpdate(
         { _id: toMongoId(id) }, 
         { $set: { name } },
-        { returnDocument: 'after' }
+        { returnDocument: 'after' } // Return the updated document.
     );
     res.json(fromMongo(result));
 });
@@ -166,26 +180,28 @@ app.delete('/api/game-systems/:id', async (req, res) => {
     const { id } = req.params;
     const systemId = toMongoId(id);
     
-    // Find all armies associated with this game system
+    // This is a cascading delete. Deleting a game system also deletes its associated armies and models.
+    // 1. Find all armies associated with this game system.
     const armiesToDelete = await armiesCollection.find({ gameSystemId: systemId }).toArray();
     const armyIdsToDelete = armiesToDelete.map(a => a._id);
 
-    // Delete models associated with those armies or the game system
+    // 2. Delete models associated with those armies.
     if (armyIdsToDelete.length > 0) {
         await modelsCollection.deleteMany({ armyIds: { $in: armyIdsToDelete } });
     }
-    // Delete the armies
+    // 3. Delete the armies themselves.
     await armiesCollection.deleteMany({ gameSystemId: systemId });
-    // Delete the game system
+    // 4. Finally, delete the game system.
     await gameSystemsCollection.deleteOne({ _id: systemId });
     
-    res.status(204).send();
+    res.status(204).send(); // 204 No Content status
 });
 
 
-// Armies
+// --- Armies Endpoints ---
 app.get('/api/armies', async (req, res) => {
     const armies = await armiesCollection.find({}).toArray();
+    // Here we need to convert both _id and the gameSystemId ObjectId.
     res.json(armies.map(doc => ({...fromMongo(doc), gameSystemId: doc.gameSystemId.toHexString()})));
 });
 
@@ -216,22 +232,24 @@ app.delete('/api/armies/:id', async (req, res) => {
     const { id } = req.params;
     const armyId = toMongoId(id);
 
-    // Remove this armyId from any model's armyIds array
+    // When deleting an army, we don't delete the model, just disassociate it.
+    // Use MongoDB's `$pull` operator to remove the armyId from any model's `armyIds` array.
     await modelsCollection.updateMany(
         { armyIds: armyId },
         { $pull: { armyIds: armyId } }
     );
     
-    // Delete the army itself
+    // Then, delete the army document itself.
     await armiesCollection.deleteOne({ _id: armyId });
     
     res.status(204).send();
 });
 
 
-// Models
+// --- Models Endpoints ---
 app.get('/api/models', async (req, res) => {
     const models = await modelsCollection.find({}).toArray();
+    // Convert all relevant ObjectIds to strings for the client.
     res.json(models.map(doc => ({
         ...fromMongo(doc), 
         gameSystemId: doc.gameSystemId.toHexString(),
@@ -241,6 +259,7 @@ app.get('/api/models', async (req, res) => {
 
 app.post('/api/models', async (req, res) => {
     const { name, armyIds, gameSystemId, description, quantity, status, imageUrl, paintingNotes } = req.body;
+    // Convert incoming string IDs to ObjectIds before inserting into the database.
     const newModelData = {
         name,
         armyIds: armyIds.map(id => toMongoId(id)),
@@ -253,6 +272,7 @@ app.post('/api/models', async (req, res) => {
     };
     const result = await modelsCollection.insertOne(newModelData);
     const newDoc = await modelsCollection.findOne({_id: result.insertedId});
+    // Convert the newly created document back to the client-friendly format.
     res.status(201).json({
         ...fromMongo(newDoc),
         gameSystemId: newDoc.gameSystemId.toHexString(),
@@ -264,17 +284,19 @@ app.put('/api/models/:id', async (req, res) => {
     const { id } = req.params;
     const modelUpdates = req.body;
     
-    // Convert string IDs to ObjectIds where necessary
+    // Convert any ID strings in the update payload to ObjectIds.
     if(modelUpdates.gameSystemId) modelUpdates.gameSystemId = toMongoId(modelUpdates.gameSystemId);
     if(modelUpdates.armyIds) modelUpdates.armyIds = modelUpdates.armyIds.map(id => toMongoId(id));
     
-    delete modelUpdates.id; // remove id property before update
+    // The `id` property is not part of the MongoDB document, so remove it before updating.
+    delete modelUpdates.id;
 
     const result = await modelsCollection.findOneAndUpdate(
         { _id: toMongoId(id) }, 
         { $set: modelUpdates },
         { returnDocument: 'after' }
     );
+    // Convert the updated document back to the client-friendly format.
     res.json({
         ...fromMongo(result),
         gameSystemId: result.gameSystemId.toHexString(),
@@ -288,4 +310,5 @@ app.delete('/api/models/:id', async (req, res) => {
     res.status(204).send();
 });
 
+// Start the application.
 main().catch(console.error);

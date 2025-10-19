@@ -2,6 +2,7 @@
  * @file App.tsx
  * @description The root component of the application.
  * It sets up the main layout, routing, and global state management.
+ * This program was written by Stuart Mason October 2025.
  */
 
 import React from 'react';
@@ -16,17 +17,23 @@ import { DataProvider } from './context/DataContext';
 
 const App: React.FC = () => {
   return (
-    // DataProvider wraps the entire application, making the global state (models, armies, etc.)
-    // available to all components via the `useData` hook.
+    // DataProvider wraps the entire application. This is a React Context Provider that holds
+    // the global state (like models, armies, game systems) and makes it accessible to any
+    // component nested within it, avoiding the need for "prop drilling".
     <DataProvider>
-      {/* HashRouter is used for client-side routing. It uses the URL hash to keep the UI in sync with the URL. */}
+      {/* HashRouter is used for client-side routing. It uses the URL hash (#) to keep the UI
+          in sync with the URL. This is a good choice for single-page applications that
+          may be hosted on static file servers without server-side routing configuration. */}
       <HashRouter>
         <div className="flex h-screen bg-background text-text-primary">
-          {/* The Sidebar component is rendered on all pages for consistent navigation. */}
+          {/* The Sidebar component is rendered here, outside the Routes, so that it appears
+              on all pages, providing consistent navigation throughout the application. */}
           <Sidebar />
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            {/* The Routes component defines the different pages of the application. */}
+            {/* The Routes component from react-router-dom defines the different pages of the application.
+                When the URL hash changes, it renders the component associated with the matching path. */}
             <Routes>
+              {/* Each Route defines a mapping between a URL path and a React component. */}
               <Route path="/" element={<WelcomePage />} />
               <Route path="/collection" element={<CollectionPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
