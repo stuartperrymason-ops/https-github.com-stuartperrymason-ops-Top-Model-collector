@@ -28,13 +28,13 @@ This diagram shows the high-level architecture, from the user interface down to 
 ```mermaid
 graph TD
     subgraph A [Frontend (Browser)]
-        A[UI Components <br>(Pages & Modals)] -- Calls functions --> B(DataContext <br>Global State);
+        A[UI Components \n(Pages & Modals)] -- Calls functions --> B(DataContext \nGlobal State);
         B -- Updates state & triggers re-render --> A;
         B -- Calls API methods --> C(apiService.ts);
     end
 
     subgraph Backend (Server)
-        D[Express Server <br>(server.js)] -- CRUD operations --> E(MongoDB);
+        D[Express Server \n(server.js)] -- CRUD operations --> E(MongoDB);
     end
 
     C -- HTTP Requests (fetch) --> D;
@@ -83,13 +83,13 @@ This flowchart illustrates the logic behind the CSV import feature, from file pa
 
 ```mermaid
 graph TD
-    A[Start] --> B{User selects CSV file};
+    A[Start] --> B[User selects CSV file];
     B --> C[Parse CSV using PapaParse];
-    C --> D{Validate each row \n(check for errors, find duplicates)};
-    D --> E{Any new items, duplicates, or errors?};
+    C --> D[Validate each row \n(check for errors, find duplicates)];
+    D --> E[Any new items, duplicates, or errors?];
     E -- No --> F[Finalize Import];
     E -- Yes --> G[Show Review Modal];
-    G --> H{User confirms choices & clicks "Confirm"};
+    G --> H[User confirms choices & clicks "Confirm"];
     H --> F;
     F --> I[1. Create new Game Systems in DB];
     I --> J[2. Create new Armies in DB];
