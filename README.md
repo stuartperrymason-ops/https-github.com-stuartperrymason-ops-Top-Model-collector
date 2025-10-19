@@ -15,6 +15,47 @@ Welcome to ModelForge, your digital armory for managing tabletop miniatures. Thi
 - **Customizable Settings**: Manage the game systems and armies that make up your collection.
 - **AI-Powered Descriptions**: Use the Gemini API to automatically generate rich, flavorful descriptions for your models.
 
+## Getting Started
+
+Follow these instructions to get a copy of the project up and running on your local machine.
+
+### Prerequisites
+
+You will need to have [Node.js](https://nodejs.org/) (version 18.x or later) and a package manager like [npm](https://www.npmjs.com/) installed.
+
+### Installation & Setup
+
+1.  **Clone the repository or download the source code:**
+    ```bash
+    git clone <repository-url>
+    cd <project-directory>
+    ```
+
+2.  **Install dependencies:**
+    Open your terminal in the project's root directory and run:
+    ```bash
+    npm install
+    ```
+
+### Running the Development Server
+
+Once the dependencies are installed, you can start the Vite development server:
+
+```bash
+npm run dev
+```
+
+Open your web browser and navigate to the local URL provided by Vite (usually `http://localhost:5173`) to see the application running.
+
+## Building for Production
+
+When you are ready to create a production-ready version of your application, you can run the build command:
+
+```bash
+npm run build
+```
+
+This command will compile the TypeScript/React code and bundle it into a `dist` directory. You can deploy this `dist` folder to any static site hosting service.
 ---
 
 ## Application Flow Diagrams
@@ -91,7 +132,7 @@ graph TD
     D --> E[Any new items, duplicates, or errors?];
     E -- No --> F[Finalize Import];
     E -- Yes --> G[Show Review Modal]
-    G --> H[User confirms choices & clicks Confirm];
+    G --> H[User confirms choices & clicks hConfirm];
     H --> F;
     F --> I[1. Create new Game Systems in DB];
     I --> J[2. Create new Armies in DB];
