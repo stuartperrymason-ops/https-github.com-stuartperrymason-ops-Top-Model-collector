@@ -28,10 +28,12 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     imageUrl: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (model) {
       setFormData({ ...model, armyIds: model.armyIds || [] });
+      setImagePreview(model.imageUrl || null);
     } else {
       // Reset form for new model
       setFormData({
@@ -43,6 +45,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
         status: 'Purchased',
         imageUrl: '',
       });
+      setImagePreview(null);
     }
   }, [model, isOpen]);
 
@@ -71,6 +74,34 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
         return { ...prev, armyIds: newArmyIds };
     });
   };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Check file size (e.g., limit to 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File is too large. Please select an image under 2MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData(prev => ({ ...prev, imageUrl: base64String }));
+        setImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
+    setImagePreview(null);
+    const fileInput = document.getElementById('imageUpload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
 
   const handleGenerateDescription = async () => {
     if (!formData.name || formData.armyIds.length === 0 || !formData.gameSystemId) {
@@ -190,27 +221,55 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
             </div>
           </div>
           
-          <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
               <label htmlFor="quantity" className="block text-sm font-medium text-text-secondary mb-1">Quantity</label>
               <input type="number" name="quantity" id="quantity" value={formData.quantity} onChange={handleChange} required min="1" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
-          </div>
-
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">Painting Status</label>
-            <select name="status" id="status" value={formData.status} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
-              <option value="Purchased">Purchased</option>
-              <option value="Printed">Printed</option>
-              <option value="Assembled">Assembled</option>
-              <option value="Primed">Primed</option>
-              <option value="Painted">Painted</option>
-              <option value="Based">Based</option>
-              <option value="Ready to Game">Ready to Game</option>
-            </select>
+            </div>
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">Painting Status</label>
+              <select name="status" id="status" value={formData.status} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="Purchased">Purchased</option>
+                <option value="Printed">Printed</option>
+                <option value="Assembled">Assembled</option>
+                <option value="Primed">Primed</option>
+                <option value="Painted">Painted</option>
+                <option value="Based">Based</option>
+                <option value="Ready to Game">Ready to Game</option>
+              </select>
+            </div>
           </div>
           
           <div>
-            <label htmlFor="imageUrl" className="block text-sm font-medium text-text-secondary mb-1">Image URL (Optional)</label>
-            <input type="text" name="imageUrl" id="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+            <label className="block text-sm font-medium text-text-secondary mb-1">Model Image</label>
+            <div className="mt-1 flex items-center gap-4 p-3 bg-background border border-border rounded-md">
+              {imagePreview ? (
+                <img src={imagePreview} alt="Model Preview" className="w-20 h-20 object-cover rounded-md bg-background" />
+              ) : (
+                <div className="w-20 h-20 bg-gray-700 rounded-md flex items-center justify-center text-text-secondary text-xs text-center p-2">
+                  No Image
+                </div>
+              )}
+              <div className="flex-grow">
+                <label htmlFor="imageUpload" className="cursor-pointer bg-primary text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-indigo-500 transition-colors">
+                  Choose Image
+                </label>
+                <input 
+                  id="imageUpload"
+                  name="imageUpload"
+                  type="file" 
+                  accept="image/png, image/jpeg, image/webp" 
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                {imagePreview && (
+                  <button type="button" onClick={removeImage} className="ml-3 text-sm text-red-400 hover:text-red-300">
+                    Remove
+                  </button>
+                )}
+                <p className="text-xs text-text-secondary mt-2">Max file size: 2MB</p>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end gap-4 pt-4">

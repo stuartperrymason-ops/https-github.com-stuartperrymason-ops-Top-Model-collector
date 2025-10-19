@@ -8,6 +8,7 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import ModelCard from '../components/ModelCard';
 import ModelFormModal from '../components/ModelFormModal';
+import ModelDetailModal from '../components/ModelDetailModal';
 import { PlusIcon } from '../components/icons/Icons';
 import { Model } from '../types';
 import Papa from 'papaparse';
@@ -17,6 +18,10 @@ const CollectionPage: React.FC = () => {
   const { models, gameSystems, armies, loading, error, bulkUpdateModels, bulkDeleteModels } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+
+  // State for detail modal
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [modelForDetail, setModelForDetail] = useState<Model | null>(null);
 
   // State for filters
   const [gameSystemFilter, setGameSystemFilter] = useState<string>('');
@@ -38,10 +43,20 @@ const CollectionPage: React.FC = () => {
     setSelectedModel(model);
     setIsModalOpen(true);
   };
+
+  const handleViewModel = (model: Model) => {
+    setModelForDetail(model);
+    setIsDetailModalOpen(true);
+  };
   
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedModel(null);
+  };
+  
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setModelForDetail(null);
   };
 
   // Memoized filtering logic
@@ -196,6 +211,7 @@ const CollectionPage: React.FC = () => {
               key={model.id}
               model={model}
               onEdit={handleEditModel}
+              onView={handleViewModel}
               isBulkEditMode={isBulkEditMode}
               isSelected={selectedModelIds.includes(model.id)}
               onSelect={handleSelectModel}
@@ -250,6 +266,14 @@ const CollectionPage: React.FC = () => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           model={selectedModel}
+        />
+      )}
+
+      {isDetailModalOpen && modelForDetail && (
+        <ModelDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={handleCloseDetailModal}
+          model={modelForDetail}
         />
       )}
     </div>

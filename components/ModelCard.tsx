@@ -12,12 +12,13 @@ import { PencilIcon, TrashIcon } from './icons/Icons';
 interface ModelCardProps {
   model: Model;
   onEdit: (model: Model) => void;
+  onView: (model: Model) => void;
   isBulkEditMode: boolean;
   isSelected: boolean;
   onSelect: (modelId: string) => void;
 }
 
-const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, isSelected, onSelect }) => {
+const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, onView, isBulkEditMode, isSelected, onSelect }) => {
   const { gameSystems, armies, deleteModel } = useData();
 
   const gameSystem = gameSystems.find(gs => gs.id === model.gameSystemId);
@@ -28,6 +29,14 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete ${model.name}?`)) {
       deleteModel(model.id);
+    }
+  };
+
+  const handleCardClick = () => {
+    if (isBulkEditMode) {
+      onSelect(model.id);
+    } else {
+      onView(model);
     }
   };
 
@@ -55,17 +64,20 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
 
   return (
     <div 
-        className={`relative bg-surface rounded-lg shadow-lg overflow-hidden border transition-all duration-300 ${
+        className={`relative bg-surface rounded-lg shadow-lg overflow-hidden border transition-all duration-300 group ${
             isSelected ? 'border-primary scale-105' : 'border-border'
-        } ${isBulkEditMode ? 'cursor-pointer hover:border-primary' : 'hover:scale-105'}`}
-        onClick={() => isBulkEditMode && onSelect(model.id)}
+        } ${isBulkEditMode ? 'cursor-pointer' : 'cursor-pointer'} hover:border-primary hover:scale-105`}
+        onClick={handleCardClick}
     >
         {isBulkEditMode && (
             <div className="absolute top-2 right-2 z-10 bg-surface bg-opacity-75 rounded-full">
                 <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => onSelect(model.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onSelect(model.id);
+                    }}
                     onClick={(e) => e.stopPropagation()} // Prevent card click from firing twice
                     className="h-6 w-6 rounded-full border-gray-300 text-primary focus:ring-primary bg-transparent"
                     aria-label={`Select ${model.name}`}
@@ -95,7 +107,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
         
         <div className="flex justify-end gap-2 mt-4 border-t border-border pt-3">
           <button 
-            onClick={() => onEdit(model)} 
+            onClick={(e) => { e.stopPropagation(); onEdit(model); }} 
             className="p-2 text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isBulkEditMode}
             aria-label={`Edit ${model.name}`}
@@ -103,7 +115,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
             <PencilIcon />
           </button>
           <button 
-            onClick={handleDelete} 
+            onClick={(e) => { e.stopPropagation(); handleDelete(); }} 
             className="p-2 text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isBulkEditMode}
             aria-label={`Delete ${model.name}`}
