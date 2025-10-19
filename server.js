@@ -1,66 +1,66 @@
 /**
  * @file server.js
- * @description An Express server with a MongoDB connection to provide a persistent API for the ModelForge application.
- * It provides CRUD endpoints for game systems, armies, and models.
+ * @description Backend Express server for the ModelForge application.
+ * Connects to a MongoDB database and provides API endpoints for CRUD operations.
  */
-
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
-require('dotenv').config();
 
 const app = express();
 const PORT = 3001;
+
+// MongoDB connection settings
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
+const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
+const client = new MongoClient(MONGODB_URI);
+
+let db;
+let gameSystemsCollection;
+let armiesCollection;
+let modelsCollection;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection settings from .env file
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = process.env.DB_NAME || 'model_collector';
-
-let gameSystemsCollection;
-let armiesCollection;
-let modelsCollection;
-
 /**
- * Maps MongoDB's internal _id to a frontend-friendly 'id' string.
- * @param {object} doc - The document from MongoDB.
- * @returns {object} The document with `_id` replaced by `id`.
+ * Seeds the database with initial data if it's empty.
  */
-const mapMongoId = (doc) => {
-    if (doc && doc._id) {
-        doc.id = doc._id.toString();
-        delete doc._id;
-    }
-    return doc;
-};
+const seedDatabase = async () => {
+    try {
+        const systemCount = await gameSystemsCollection.countDocuments();
+        if (systemCount > 0) {
+            console.log('Database already contains data. Skipping seed.');
+            return;
+        }
 
-/**
- * Seeds the database with initial data if the collections are empty.
- */
-async function seedDatabase() {
-    const systemCount = await gameSystemsCollection.countDocuments();
-    if (systemCount === 0) {
-        console.log('Database is empty, seeding with initial data...');
-        const gsResult = await gameSystemsCollection.insertMany([
-            { name: 'Warhammer 40,000' },
-            { name: 'Age of Sigmar' },
-        ]);
+        console.log('Seeding database with initial data...');
 
-        const wh40kId = gsResult.insertedIds[0].toString();
-        const aosId = gsResult.insertedIds[1].toString();
+        // Game Systems
+        const wh40k = await gameSystemsCollection.insertOne({ name: 'Warhammer 40,000' });
+        const aos = await gameSystemsCollection.insertOne({ name: 'Age of Sigmar' });
+        const mcp = await gameSystemsCollection.insertOne({ name: 'Marvel Crisis Protocol' });
 
-        const armyResult = await armiesCollection.insertMany([
-            { name: 'Space Marines', gameSystemId: wh40kId },
-            { name: 'Orks', gameSystemId: wh40kId },
-            { name: 'Stormcast Eternals', gameSystemId: aosId },
-        ]);
+        const wh40kId = wh40k.insertedId;
+        const aosId = aos.insertedId;
+        const mcpId = mcp.insertedId;
 
-        const smId = armyResult.insertedIds[0].toString();
-        const orkId = armyResult.insertedIds[1].toString();
+        // Armies
+        const sm = await armiesCollection.insertOne({ name: 'Space Marines', gameSystemId: wh40kId });
+        const orks = await armiesCollection.insertOne({ name: 'Orks', gameSystemId: wh40kId });
+        await armiesCollection.insertOne({ name: 'Stormcast Eternals', gameSystemId: aosId });
+        const avengers = await armiesCollection.insertOne({ name: 'Avengers', gameSystemId: mcpId });
+        const xmen = await armiesCollection.insertOne({ name: 'Uncanny X-Men', gameSystemId: mcpId });
 
+        const smId = sm.insertedId;
+        const orksId = orks.insertedId;
+        const avengersId = avengers.insertedId;
+        const xmenId = xmen.insertedId;
+
+
+        // Models
         await modelsCollection.insertMany([
             {
                 name: 'Primaris Intercessor',
@@ -73,76 +73,108 @@ async function seedDatabase() {
             },
             {
                 name: 'Ork Boy',
-                armyIds: [orkId],
+                armyIds: [orksId],
                 gameSystemId: wh40kId,
                 description: 'Ork Boyz are the rank-and-file infantry of an Ork army. What they lack in skill, they make up for in sheer numbers and enthusiasm for a good scrap.',
                 quantity: 20,
                 status: 'Primed',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Ork+Boy',
+            },
+            {
+                name: 'Wolverine',
+                armyIds: [avengersId, xmenId],
+                gameSystemId: mcpId,
+                description: "He's the best there is at what he does, but what he does isn't very nice. A mutant with a healing factor and adamantium claws.",
+                quantity: 1,
+                status: 'Painted',
+                imageUrl: 'https://via.placeholder.com/300x200.png?text=Wolverine',
             }
         ]);
-        console.log('Seeding complete.');
+
+        console.log('Database seeded successfully.');
+
+    } catch (error) {
+        console.error('Error seeding database:', error);
     }
-}
+};
 
 /**
- * Connects to the MongoDB database and initializes collection variables.
+ * Connects to MongoDB and starts the Express server.
  */
-async function connectToDb() {
+async function main() {
     try {
-        const client = new MongoClient(MONGODB_URI);
         await client.connect();
         console.log('Connected successfully to MongoDB');
-        
-        const db = client.db(DB_NAME);
-        gameSystemsCollection = db.collection('gameSystems');
+        db = client.db(DB_NAME);
+        gameSystemsCollection = db.collection('game_systems');
         armiesCollection = db.collection('armies');
         modelsCollection = db.collection('models');
 
+        // Seed database if empty
         await seedDatabase();
+
+        app.listen(PORT, () => {
+            console.log(`Server running on http://localhost:${PORT}`);
+        });
+
     } catch (e) {
         console.error('Could not connect to MongoDB', e);
         process.exit(1);
     }
 }
 
+// --- API Helper ---
+// Helper to convert _id to id for client-side consistency
+const fromMongo = (doc) => {
+    if (!doc) return doc;
+    const { _id, ...rest } = doc;
+    return { id: _id.toHexString(), ...rest };
+};
+
+const toMongoId = (id) => new ObjectId(id);
+
 // --- API Endpoints ---
 
 // Game Systems
 app.get('/api/game-systems', async (req, res) => {
     const systems = await gameSystemsCollection.find({}).toArray();
-    res.json(systems.map(mapMongoId));
+    res.json(systems.map(fromMongo));
 });
 
 app.post('/api/game-systems', async (req, res) => {
     const { name } = req.body;
     const result = await gameSystemsCollection.insertOne({ name });
-    const newSystem = await gameSystemsCollection.findOne({ _id: result.insertedId });
-    res.status(201).json(mapMongoId(newSystem));
+    const newSystem = { id: result.insertedId.toHexString(), name };
+    res.status(201).json(newSystem);
 });
 
 app.put('/api/game-systems/:id', async (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
-    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid ID format' });
-    
-    const result = await gameSystemsCollection.updateOne({ _id: new ObjectId(id) }, { $set: { name } });
-    if (result.matchedCount === 0) return res.status(404).json({ message: 'Game system not found' });
-    
-    const updatedSystem = await gameSystemsCollection.findOne({ _id: new ObjectId(id) });
-    res.json(mapMongoId(updatedSystem));
+    const result = await gameSystemsCollection.findOneAndUpdate(
+        { _id: toMongoId(id) }, 
+        { $set: { name } },
+        { returnDocument: 'after' }
+    );
+    res.json(fromMongo(result));
 });
 
 app.delete('/api/game-systems/:id', async (req, res) => {
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid ID format' });
+    const systemId = toMongoId(id);
     
-    // Cascade delete associated armies and models
-    await armiesCollection.deleteMany({ gameSystemId: id });
-    await modelsCollection.deleteMany({ gameSystemId: id });
-    
-    const result = await gameSystemsCollection.deleteOne({ _id: new ObjectId(id) });
-    if (result.deletedCount === 0) return res.status(404).json({ message: 'Game system not found' });
+    // Find all armies associated with this game system
+    const armiesToDelete = await armiesCollection.find({ gameSystemId: systemId }).toArray();
+    const armyIdsToDelete = armiesToDelete.map(a => a._id);
+
+    // Delete models associated with those armies or the game system
+    if (armyIdsToDelete.length > 0) {
+        await modelsCollection.deleteMany({ armyIds: { $in: armyIdsToDelete } });
+    }
+    // Delete the armies
+    await armiesCollection.deleteMany({ gameSystemId: systemId });
+    // Delete the game system
+    await gameSystemsCollection.deleteOne({ _id: systemId });
     
     res.status(204).send();
 });
@@ -151,41 +183,44 @@ app.delete('/api/game-systems/:id', async (req, res) => {
 // Armies
 app.get('/api/armies', async (req, res) => {
     const armies = await armiesCollection.find({}).toArray();
-    res.json(armies.map(mapMongoId));
+    res.json(armies.map(doc => ({...fromMongo(doc), gameSystemId: doc.gameSystemId.toHexString()})));
 });
 
 app.post('/api/armies', async (req, res) => {
     const { name, gameSystemId } = req.body;
-    const result = await armiesCollection.insertOne({ name, gameSystemId });
-    const newArmy = await armiesCollection.findOne({ _id: result.insertedId });
-    res.status(201).json(mapMongoId(newArmy));
+    const newArmyData = { name, gameSystemId: toMongoId(gameSystemId) };
+    const result = await armiesCollection.insertOne(newArmyData);
+    const newDoc = await armiesCollection.findOne({_id: result.insertedId});
+    res.status(201).json({...fromMongo(newDoc), gameSystemId: newDoc.gameSystemId.toHexString()});
 });
 
 app.put('/api/armies/:id', async (req, res) => {
     const { id } = req.params;
     const { name, gameSystemId } = req.body;
-    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid ID format' });
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (gameSystemId) updateData.gameSystemId = toMongoId(gameSystemId);
     
-    const updateDoc = {};
-    if (name) updateDoc.name = name;
-    if (gameSystemId) updateDoc.gameSystemId = gameSystemId;
-
-    const result = await armiesCollection.updateOne({ _id: new ObjectId(id) }, { $set: updateDoc });
-    if (result.matchedCount === 0) return res.status(404).json({ message: 'Army not found' });
-
-    const updatedArmy = await armiesCollection.findOne({ _id: new ObjectId(id) });
-    res.json(mapMongoId(updatedArmy));
+    const result = await armiesCollection.findOneAndUpdate(
+        { _id: toMongoId(id) }, 
+        { $set: updateData },
+        { returnDocument: 'after' }
+    );
+    res.json({...fromMongo(result), gameSystemId: result.gameSystemId.toHexString()});
 });
 
 app.delete('/api/armies/:id', async (req, res) => {
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid ID format' });
+    const armyId = toMongoId(id);
+
+    // Remove this armyId from any model's armyIds array
+    await modelsCollection.updateMany(
+        { armyIds: armyId },
+        { $pull: { armyIds: armyId } }
+    );
     
-    // Disassociate models from the deleted army, instead of deleting the models.
-    await modelsCollection.updateMany({ armyIds: id }, { $pull: { armyIds: id } });
-    
-    const result = await armiesCollection.deleteOne({ _id: new ObjectId(id) });
-    if (result.deletedCount === 0) return res.status(404).json({ message: 'Army not found' });
+    // Delete the army itself
+    await armiesCollection.deleteOne({ _id: armyId });
     
     res.status(204).send();
 });
@@ -194,44 +229,59 @@ app.delete('/api/armies/:id', async (req, res) => {
 // Models
 app.get('/api/models', async (req, res) => {
     const models = await modelsCollection.find({}).toArray();
-    res.json(models.map(mapMongoId));
+    res.json(models.map(doc => ({
+        ...fromMongo(doc), 
+        gameSystemId: doc.gameSystemId.toHexString(),
+        armyIds: doc.armyIds.map(id => id.toHexString())
+    })));
 });
 
 app.post('/api/models', async (req, res) => {
-    const modelData = req.body;
-    const result = await modelsCollection.insertOne(modelData);
-    const newModel = await modelsCollection.findOne({ _id: result.insertedId });
-    res.status(201).json(mapMongoId(newModel));
+    const { name, armyIds, gameSystemId, description, quantity, status, imageUrl } = req.body;
+    const newModelData = {
+        name,
+        armyIds: armyIds.map(id => toMongoId(id)),
+        gameSystemId: toMongoId(gameSystemId),
+        description,
+        quantity,
+        status,
+        imageUrl,
+    };
+    const result = await modelsCollection.insertOne(newModelData);
+    const newDoc = await modelsCollection.findOne({_id: result.insertedId});
+    res.status(201).json({
+        ...fromMongo(newDoc),
+        gameSystemId: newDoc.gameSystemId.toHexString(),
+        armyIds: newDoc.armyIds.map(id => id.toHexString())
+    });
 });
 
 app.put('/api/models/:id', async (req, res) => {
     const { id } = req.params;
     const modelUpdates = req.body;
-    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid ID format' });
     
-    const result = await modelsCollection.updateOne({ _id: new ObjectId(id) }, { $set: modelUpdates });
-    if (result.matchedCount === 0) return res.status(404).json({ message: 'Model not found' });
+    // Convert string IDs to ObjectIds where necessary
+    if(modelUpdates.gameSystemId) modelUpdates.gameSystemId = toMongoId(modelUpdates.gameSystemId);
+    if(modelUpdates.armyIds) modelUpdates.armyIds = modelUpdates.armyIds.map(id => toMongoId(id));
     
-    const updatedModel = await modelsCollection.findOne({ _id: new ObjectId(id) });
-    res.json(mapMongoId(updatedModel));
+    delete modelUpdates.id; // remove id property before update
+
+    const result = await modelsCollection.findOneAndUpdate(
+        { _id: toMongoId(id) }, 
+        { $set: modelUpdates },
+        { returnDocument: 'after' }
+    );
+    res.json({
+        ...fromMongo(result),
+        gameSystemId: result.gameSystemId.toHexString(),
+        armyIds: result.armyIds.map(id => id.toHexString())
+    });
 });
 
 app.delete('/api/models/:id', async (req, res) => {
     const { id } = req.params;
-    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid ID format' });
-
-    const result = await modelsCollection.deleteOne({ _id: new ObjectId(id) });
-    if (result.deletedCount === 0) return res.status(404).json({ message: 'Model not found' });
-    
+    await modelsCollection.deleteOne({ _id: toMongoId(id) });
     res.status(204).send();
 });
 
-
-// Start server after connecting to DB
-connectToDb().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
-    });
-}).catch(err => {
-    console.error("Failed to start server:", err);
-});
+main().catch(console.error);
