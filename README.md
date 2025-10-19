@@ -27,13 +27,13 @@ This diagram shows the high-level architecture, from the user interface down to 
 
 ```mermaid
 graph TD
-    subgraph Frontend[Frontend (Browser)]
+    subgraph Frontend (Browser)
         UI[UI Components (Pages & Modals)] --> State[DataContext Global State]
         State --> UI
         State --> API[apiService.ts]
     end
 
-    subgraph Backend[Backend (Server)]
+    subgraph Backend (Server)
         Server[Express Server (server.js)] --> DB[MongoDB]
     end
 
@@ -45,6 +45,7 @@ graph TD
     style API fill:#bde0fe,stroke:#2b2d42,stroke-width:2px
     style Server fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
     style DB fill:#a7c957,stroke:#2b2d42,stroke-width:2px
+
 
 ```
 
