@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { Model } from '../types';
+import { Army, GameSystem, Model } from '../types';
 import Papa from 'papaparse';
 import { XIcon } from '../components/icons/Icons';
 
@@ -27,17 +27,23 @@ interface ValidationResult {
   rowIndex: number;
 }
 
+type NewArmyInfo = {
+    name: string;
+    gameSystemName: string;
+};
+
 const BulkDataPage: React.FC = () => {
-    const { gameSystems, armies, models, addToast, bulkAddModels } = useData();
+    const { gameSystems, armies, models, addToast, bulkAddModels, addGameSystem, addArmy } = useData();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     
-    // State for the new multi-step import process
     const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showSummaryModal, setShowSummaryModal] = useState(false);
     const [importSummary, setImportSummary] = useState({ success: 0, errors: 0, skippedDuplicates: 0 });
     const [importErrors, setImportErrors] = useState<ValidationResult[]>([]);
+    const [newGameSystemsToCreate, setNewGameSystemsToCreate] = useState<string[]>([]);
+    const [newArmiesToCreate, setNewArmiesToCreate] = useState<NewArmyInfo[]>([]);
 
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,91 +73,86 @@ const BulkDataPage: React.FC = () => {
 
     const validateCsvData = (data: CsvRow[]) => {
         const results: ValidationResult[] = [];
+        const systemsToCreate = new Set<string>();
+        const armiesToCreate = new Map<string, NewArmyInfo>(); // key: 'army|system'
         const validStatuses: Model['status'][] = ['Purchased', 'Printed', 'Assembled', 'Primed', 'Painted', 'Based', 'Ready to Game'];
 
         data.forEach((row, index) => {
-            // Defensive check for malformed rows (e.g., from trailing empty lines)
-            if (Object.values(row).every(val => val === null || val === '')) {
-                return;
-            }
-            const { name, 'game system': gameSystemName, army: armyName, quantity, status } = row;
+            if (Object.values(row).every(val => val === null || val === '')) return;
             
-            if (!name || !gameSystemName || !armyName || !quantity || !status) {
+            const { name, 'game system': gameSystemName, army: armyNamesRaw, quantity, status } = row;
+
+            if (!name || !gameSystemName || !armyNamesRaw || !quantity || !status) {
                 results.push({ row, data: null, status: 'ERROR', errorMessage: 'Row has missing data.', import: false, rowIndex: index });
                 return;
             }
-
-            const gameSystem = gameSystems.find(gs => gs.name.trim().toLowerCase() === gameSystemName.trim().toLowerCase());
-            if (!gameSystem) {
-                results.push({ row, data: null, status: 'ERROR', errorMessage: `Game system "${gameSystemName}" not found.`, import: false, rowIndex: index });
-                return;
-            }
-
-            const armyNames = armyName.split(',').map(name => name.trim());
-            const foundArmies = armies.filter(a =>
-                a.gameSystemId === gameSystem.id &&
-                armyNames.some(an => an.toLowerCase() === a.name.toLowerCase())
-            );
-
-            if (foundArmies.length !== armyNames.length) {
-                const missingArmies = armyNames.filter(an => !foundArmies.some(fa => fa.name.toLowerCase() === an.toLowerCase()));
-                results.push({ row, data: null, status: 'ERROR', errorMessage: `Armies not found in "${gameSystemName}": ${missingArmies.join(', ')}.`, import: false, rowIndex: index });
-                return;
-            }
-            const armyIds = foundArmies.map(a => a.id);
             
+            const cleanGameSystemName = gameSystemName.trim();
+            if (!gameSystems.some(gs => gs.name.trim().toLowerCase() === cleanGameSystemName.toLowerCase())) {
+                systemsToCreate.add(cleanGameSystemName);
+            }
+            
+            const armyNames = armyNamesRaw.split(',').map(n => n.trim());
+            const foundArmyIdsInContext: string[] = [];
+            
+            armyNames.forEach(armyName => {
+                const existingArmy = armies.find(a =>
+                    a.name.trim().toLowerCase() === armyName.toLowerCase() &&
+                    gameSystems.find(gs => gs.id === a.gameSystemId)?.name.trim().toLowerCase() === cleanGameSystemName.toLowerCase()
+                );
+                if (existingArmy) {
+                    foundArmyIdsInContext.push(existingArmy.id);
+                } else {
+                    const newArmyKey = `${armyName.toLowerCase()}|${cleanGameSystemName.toLowerCase()}`;
+                    if (!armiesToCreate.has(newArmyKey)) {
+                        armiesToCreate.set(newArmyKey, { name: armyName, gameSystemName: cleanGameSystemName });
+                    }
+                }
+            });
+
             const quantityNum = parseInt(quantity, 10);
             const formattedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
 
-            if (isNaN(quantityNum) || quantityNum < 1) {
-                results.push({ row, data: null, status: 'ERROR', errorMessage: `Invalid quantity: "${quantity}". Must be a number greater than 0.`, import: false, rowIndex: index });
-                return;
-            }
+            let errorMessage = '';
+            if (isNaN(quantityNum) || quantityNum < 1) errorMessage = `Invalid quantity: "${quantity}". Must be > 0.`;
+            if (!formattedStatus) errorMessage += `${errorMessage ? ' ' : ''}Invalid status: "${status}".`;
             
-            if (!formattedStatus) {
-                results.push({ row, data: null, status: 'ERROR', errorMessage: `Invalid status: "${status}".`, import: false, rowIndex: index });
+            if (errorMessage) {
+                results.push({ row, data: null, status: 'ERROR', errorMessage, import: false, rowIndex: index });
                 return;
             }
             
             const isDuplicate = models.some(m => 
                 m.name.trim().toLowerCase() === name.trim().toLowerCase() && 
-                m.armyIds.some(id => armyIds.includes(id))
+                m.armyIds.some(id => foundArmyIdsInContext.includes(id))
             );
             
             const modelData = {
                 name: name.trim(),
-                gameSystemId: gameSystem.id,
-                armyIds: armyIds,
+                gameSystemId: '', // Filled in during finalizeImport
+                armyIds: [],       // Filled in during finalizeImport
                 quantity: quantityNum,
-                status: formattedStatus,
+                status: formattedStatus!,
                 description: '',
                 imageUrl: '',
             };
 
-            results.push({
-                row,
-                data: modelData,
-                status: isDuplicate ? 'DUPLICATE' : 'NEW',
-                import: true,
-                rowIndex: index
-            });
+            results.push({ row, data: modelData, status: isDuplicate ? 'DUPLICATE' : 'NEW', import: true, rowIndex: index });
         });
 
+        const finalNewSystems = Array.from(systemsToCreate);
+        const finalNewArmies = Array.from(armiesToCreate.values());
+        setNewGameSystemsToCreate(finalNewSystems);
+        setNewArmiesToCreate(finalNewArmies);
         setValidationResults(results);
 
-        if (results.some(r => r.status === 'DUPLICATE' || r.status === 'ERROR')) {
-            const hasDuplicates = results.some(r => r.status === 'DUPLICATE');
-            if (hasDuplicates) {
-                setShowReviewModal(true);
-            } else {
-                // If there are only errors, go straight to summary
-                finalizeImport(results);
-            }
+        if (finalNewSystems.length > 0 || finalNewArmies.length > 0 || results.some(r => r.status !== 'NEW' && r.status !== 'DUPLICATE' )) {
+            setShowReviewModal(true);
         } else {
-            finalizeImport(results);
+            finalizeImport(results, finalNewSystems, finalNewArmies);
         }
     };
-
+    
     const handleDuplicateSelectionChange = (rowIndex: number, shouldImport: boolean) => {
         setValidationResults(prev => prev.map(r => r.rowIndex === rowIndex ? { ...r, import: shouldImport } : r));
     };
@@ -160,38 +161,84 @@ const BulkDataPage: React.FC = () => {
         setValidationResults(prev => prev.map(r => r.status === 'DUPLICATE' ? { ...r, import: shouldImport } : r));
     };
 
-    const finalizeImport = async (results: ValidationResult[]) => {
-        const modelsToAdd: Omit<Model, 'id'>[] = [];
-        let successCount = 0;
-        let skippedDuplicatesCount = 0;
-        const errors: ValidationResult[] = [];
-
-        results.forEach(result => {
-            if (result.status === 'ERROR') {
-                errors.push(result);
-            } else if (result.import && result.data) {
-                modelsToAdd.push(result.data);
-                successCount++;
-            } else if (result.status === 'DUPLICATE' && !result.import) {
-                skippedDuplicatesCount++;
-            }
-        });
-        
-        if (modelsToAdd.length > 0) {
-            await bulkAddModels(modelsToAdd);
-        }
-        
-        setImportSummary({
-            success: successCount,
-            errors: errors.length,
-            skippedDuplicates: skippedDuplicatesCount
-        });
-        setImportErrors(errors);
-        
-        // Close review modal and open summary modal
+    const finalizeImport = async (
+        results: ValidationResult[],
+        systemsToCreate: string[],
+        armiesToCreate: NewArmyInfo[]
+    ) => {
         setShowReviewModal(false);
-        setShowSummaryModal(true);
-        setIsImporting(false);
+        setIsImporting(true);
+    
+        try {
+            const createdSystems = (await Promise.all(
+                systemsToCreate.map(name => addGameSystem(name))
+            )).filter((s): s is GameSystem => s !== undefined);
+            
+            const allGameSystems = [...gameSystems, ...createdSystems];
+    
+            const createdArmies = (await Promise.all(
+                armiesToCreate.map(async (army) => {
+                    const gameSystem = allGameSystems.find(gs => gs.name.trim().toLowerCase() === army.gameSystemName.trim().toLowerCase());
+                    if (gameSystem) {
+                        return addArmy(army.name, gameSystem.id);
+                    }
+                    return undefined;
+                })
+            )).filter((a): a is Army => a !== undefined);
+            
+            const allArmies = [...armies, ...createdArmies];
+            
+            const modelsToAdd: Omit<Model, 'id'>[] = [];
+            let successCount = 0;
+            let skippedDuplicatesCount = 0;
+            const finalErrors: ValidationResult[] = [];
+    
+            results.forEach(result => {
+                if (result.status === 'ERROR') {
+                    finalErrors.push(result);
+                    return;
+                }
+                if (!result.import) {
+                    if (result.status === 'DUPLICATE') skippedDuplicatesCount++;
+                    return;
+                }
+    
+                const { row, data } = result;
+                if (!data) return;
+    
+                const gameSystem = allGameSystems.find(gs => gs.name.trim().toLowerCase() === row['game system'].trim().toLowerCase());
+                if (!gameSystem) {
+                    finalErrors.push({ ...result, status: 'ERROR', errorMessage: `Failed to find/create game system: ${row['game system']}` });
+                    return;
+                }
+    
+                const armyNames = row.army.split(',').map(n => n.trim().toLowerCase());
+                const armyIds = allArmies
+                    .filter(a => a.gameSystemId === gameSystem.id && armyNames.includes(a.name.trim().toLowerCase()))
+                    .map(a => a.id);
+                
+                if (armyIds.length !== armyNames.length) {
+                    finalErrors.push({ ...result, status: 'ERROR', errorMessage: `Failed to find/create one or more armies for ${row.name}` });
+                    return;
+                }
+    
+                modelsToAdd.push({ ...data, gameSystemId: gameSystem.id, armyIds: armyIds });
+                successCount++;
+            });
+            
+            if (modelsToAdd.length > 0) {
+                await bulkAddModels(modelsToAdd);
+            }
+            
+            setImportSummary({ success: successCount, errors: finalErrors.length, skippedDuplicates: skippedDuplicatesCount });
+            setImportErrors(finalErrors);
+        } catch (err) {
+            console.error("Error during final import phase:", err);
+            addToast("A critical error occurred during import.", "error");
+        } finally {
+            setShowSummaryModal(true);
+            setIsImporting(false);
+        }
     };
 
     const closeSummaryAndReset = () => {
@@ -199,6 +246,8 @@ const BulkDataPage: React.FC = () => {
         setSelectedFile(null);
         setValidationResults([]);
         setImportErrors([]);
+        setNewGameSystemsToCreate([]);
+        setNewArmiesToCreate([]);
         const fileInput = document.getElementById('csv-file-input') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
     };
@@ -228,7 +277,7 @@ const BulkDataPage: React.FC = () => {
                     </p>
                 </div>
                 <p className="text-text-secondary mb-4">
-                    Note: The 'game system' and 'army' names in your file must match existing entries in the Settings page exactly.
+                    Note: If 'game system' or 'army' names in your file don't exist, they will be created automatically.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 items-center">
                     <input
@@ -251,7 +300,7 @@ const BulkDataPage: React.FC = () => {
                 )}
             </div>
 
-            {/* Review Duplicates Modal */}
+            {/* Review Modal */}
             {showReviewModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
                     <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-2xl border border-border max-h-[90vh] flex flex-col">
@@ -259,6 +308,30 @@ const BulkDataPage: React.FC = () => {
                             <h3 className="text-xl font-bold text-white">Review Import</h3>
                             <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-white"><XIcon /></button>
                         </div>
+                        
+                        {(newGameSystemsToCreate.length > 0 || newArmiesToCreate.length > 0) && (
+                            <div className="mb-4">
+                                <h4 className="font-semibold text-green-400 mb-2">The following new items will be created:</h4>
+                                <div className="space-y-2 bg-background p-3 rounded-md max-h-40 overflow-y-auto">
+                                    {newGameSystemsToCreate.length > 0 && (
+                                        <div>
+                                            <p className="text-sm font-bold text-text-secondary">Game Systems</p>
+                                            <ul className="list-disc list-inside ml-4">
+                                                {newGameSystemsToCreate.map(name => <li key={name} className="text-sm text-text-primary">{name}</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {newArmiesToCreate.length > 0 && (
+                                        <div className="mt-2">
+                                            <p className="text-sm font-bold text-text-secondary">Armies</p>
+                                            <ul className="list-disc list-inside ml-4">
+                                                {newArmiesToCreate.map(army => <li key={`${army.gameSystemName}-${army.name}`} className="text-sm text-text-primary">{army.name} ({army.gameSystemName})</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         
                         {errorsInReview.length > 0 && (
                             <div className="mb-4">
@@ -275,7 +348,7 @@ const BulkDataPage: React.FC = () => {
                         
                         {duplicates.length > 0 && (
                            <>
-                            <p className="text-text-secondary mb-4">The following models already exist in your collection. Please select the ones you still wish to import.</p>
+                            <p className="text-text-secondary my-4">The following models already exist. Please select which ones you still wish to import.</p>
                             <div className="flex justify-between items-center mb-4 p-2 bg-background rounded-md">
                                 <span className="font-semibold">Toggle All Duplicates</span>
                                 <div>
@@ -307,7 +380,7 @@ const BulkDataPage: React.FC = () => {
                         </div>
                         <div className="flex justify-end gap-4 pt-6 flex-shrink-0">
                             <button onClick={() => setShowReviewModal(false)} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700">Cancel</button>
-                            <button onClick={() => finalizeImport(validationResults)} className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500">Confirm Import</button>
+                            <button onClick={() => finalizeImport(validationResults, newGameSystemsToCreate, newArmiesToCreate)} className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500">Confirm Import</button>
                         </div>
                     </div>
                 </div>

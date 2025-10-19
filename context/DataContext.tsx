@@ -18,11 +18,11 @@ interface DataContextState {
   toasts: ToastMessage[];
   addToast: (message: string, type: 'success' | 'error') => void;
   // Game System functions
-  addGameSystem: (name: string) => Promise<void>;
+  addGameSystem: (name: string) => Promise<GameSystem | undefined>;
   updateGameSystem: (id: string, name: string) => Promise<void>;
   deleteGameSystem: (id: string) => Promise<void>;
   // Army functions
-  addArmy: (name: string, gameSystemId: string) => Promise<void>;
+  addArmy: (name: string, gameSystemId: string) => Promise<Army | undefined>;
   updateArmy: (id: string, name: string, gameSystemId: string) => Promise<void>;
   deleteArmy: (id: string) => Promise<void>;
   // Model functions
@@ -88,14 +88,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }, [fetchData]);
 
   // CRUD operations for Game Systems
-  const addGameSystem = async (name: string) => {
+  const addGameSystem = async (name: string): Promise<GameSystem | undefined> => {
     try {
       const newSystem = await apiService.addGameSystem({ name });
       setGameSystems(prev => [...prev, newSystem]);
       addToast('Game system added successfully!', 'success');
+      return newSystem;
     } catch (err) {
       console.error('Failed to add game system:', err);
       addToast('Failed to add game system.', 'error');
+      return undefined;
     }
   };
   
@@ -125,14 +127,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   };
 
   // CRUD operations for Armies
-  const addArmy = async (name: string, gameSystemId: string) => {
+  const addArmy = async (name: string, gameSystemId: string): Promise<Army | undefined> => {
     try {
       const newArmy = await apiService.addArmy({ name, gameSystemId });
       setArmies(prev => [...prev, newArmy]);
       addToast('Army added successfully!', 'success');
+      return newArmy;
     } catch (err) {
       console.error('Failed to add army:', err);
       addToast('Failed to add army.', 'error');
+      return undefined;
     }
   };
   
