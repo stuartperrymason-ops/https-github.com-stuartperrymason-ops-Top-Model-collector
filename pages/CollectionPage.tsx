@@ -48,7 +48,7 @@ const CollectionPage: React.FC = () => {
   const filteredModels = useMemo(() => {
     return models
       .filter(model => !gameSystemFilter || model.gameSystemId === gameSystemFilter)
-      .filter(model => !armyFilter || model.armyId === armyFilter)
+      .filter(model => !armyFilter || model.armyIds.includes(armyFilter))
       .filter(model => model.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [models, gameSystemFilter, armyFilter, searchQuery]);
 
@@ -102,11 +102,12 @@ const CollectionPage: React.FC = () => {
   const handleExportCsv = () => {
     const dataToExport = filteredModels.map(model => {
       const gameSystem = gameSystems.find(gs => gs.id === model.gameSystemId);
-      const army = armies.find(a => a.id === model.armyId);
+      const associatedArmies = armies.filter(a => model.armyIds.includes(a.id));
+      const armyNames = associatedArmies.map(a => a.name).join(', ');
       return {
         name: model.name,
         'game system': gameSystem?.name || 'N/A',
-        army: army?.name || 'N/A',
+        army: armyNames || 'N/A',
         quantity: model.quantity,
         status: model.status,
       };

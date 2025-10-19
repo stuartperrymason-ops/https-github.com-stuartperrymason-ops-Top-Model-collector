@@ -20,7 +20,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
   const { gameSystems, armies, models, addModel, updateModel } = useData();
   const [formData, setFormData] = useState<Omit<Model, 'id'>>({
     name: '',
-    armyId: '',
+    armyIds: [],
     gameSystemId: '',
     description: '',
     quantity: 1,
@@ -31,12 +31,12 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
 
   useEffect(() => {
     if (model) {
-      setFormData({ ...model });
+      setFormData({ ...model, armyIds: model.armyIds || [] });
     } else {
       // Reset form for new model
       setFormData({
         name: '',
-        armyId: '',
+        armyIds: [],
         gameSystemId: '',
         description: '',
         quantity: 1,
@@ -51,26 +51,35 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     return armies.filter(army => army.gameSystemId === formData.gameSystemId);
   }, [armies, formData.gameSystemId]);
   
-  // Effect to reset armyId if gameSystemId changes and the current armyId is no longer valid
+  // Effect to reset armyIds if gameSystemId changes
   useEffect(() => {
-    if (formData.gameSystemId && !availableArmies.some(a => a.id === formData.armyId)) {
-        setFormData(prev => ({ ...prev, armyId: '' }));
+    if (formData.gameSystemId) {
+        setFormData(prev => ({ ...prev, armyIds: [] }));
     }
-  }, [formData.gameSystemId, availableArmies, formData.armyId]);
+  }, [formData.gameSystemId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: name === 'quantity' ? parseInt(value, 10) || 0 : value }));
   };
 
+  const handleArmyChange = (armyId: string) => {
+    setFormData(prev => {
+        const newArmyIds = prev.armyIds.includes(armyId)
+            ? prev.armyIds.filter(id => id !== armyId)
+            : [...prev.armyIds, armyId];
+        return { ...prev, armyIds: newArmyIds };
+    });
+  };
+
   const handleGenerateDescription = async () => {
-    if (!formData.name || !formData.armyId || !formData.gameSystemId) {
-        alert("Please select a Game System, Army, and enter a Model Name first.");
+    if (!formData.name || formData.armyIds.length === 0 || !formData.gameSystemId) {
+        alert("Please select a Game System, at least one Army, and enter a Model Name first.");
         return;
     }
     setIsGenerating(true);
     try {
-        const armyName = armies.find(a => a.id === formData.armyId)?.name || '';
+        const armyName = armies.find(a => a.id === formData.armyIds[0])?.name || '';
         const gameSystemName = gameSystems.find(gs => gs.id === formData.gameSystemId)?.name || '';
         const desc = await generateDescription(formData.name, armyName, gameSystemName);
         setFormData(prev => ({ ...prev, description: desc }));
@@ -85,15 +94,21 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.armyIds.length === 0) {
+        alert("Please select at least one army for the model.");
+        return;
+    }
     
     // Check for duplicates only when creating a new model
     if (!model) {
       const isDuplicate = models.some(
-        m => m.name.trim().toLowerCase() === formData.name.trim().toLowerCase() && m.armyId === formData.armyId
+        m => m.name.trim().toLowerCase() === formData.name.trim().toLowerCase() && 
+             m.armyIds.some(id => formData.armyIds.includes(id))
       );
 
       if (isDuplicate) {
-        if (!window.confirm(`A model named "${formData.name.trim()}" already exists in this army. Do you want to add it anyway?`)) {
+        if (!window.confirm(`A model named "${formData.name.trim()}" already exists in one of the selected armies. Do you want to add it anyway?`)) {
           return; // User clicked 'Cancel', so we stop the submission.
         }
       }
@@ -135,11 +150,27 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
               </select>
             </div>
             <div>
-              <label htmlFor="armyId" className="block text-sm font-medium text-text-secondary mb-1">Army</label>
-              <select name="armyId" id="armyId" value={formData.armyId} onChange={handleChange} required disabled={!formData.gameSystemId} className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50">
-                <option value="" disabled>Select an army</option>
-                {availableArmies.map(army => <option key={army.id} value={army.id}>{army.name}</option>)}
-              </select>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Armies</label>
+              <div className="bg-background border border-border rounded-md p-3 h-24 overflow-y-auto space-y-2">
+                {availableArmies.length > 0 ? availableArmies.map(army => (
+                  <div key={army.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`army-${army.id}`}
+                      checked={formData.armyIds.includes(army.id)}
+                      onChange={() => handleArmyChange(army.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor={`army-${army.id}`} className="ml-2 text-sm text-text-primary">
+                      {army.name}
+                    </label>
+                  </div>
+                )) : (
+                  <p className="text-sm text-text-secondary">
+                    {formData.gameSystemId ? 'No armies for this system.' : 'Select a game system.'}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

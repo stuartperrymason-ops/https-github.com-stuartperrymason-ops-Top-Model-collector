@@ -64,7 +64,7 @@ async function seedDatabase() {
         await modelsCollection.insertMany([
             {
                 name: 'Primaris Intercessor',
-                armyId: smId,
+                armyIds: [smId],
                 gameSystemId: wh40kId,
                 description: 'The backbone of any Space Marine force, Primaris Intercessors are versatile and reliable infantry units.',
                 quantity: 10,
@@ -73,7 +73,7 @@ async function seedDatabase() {
             },
             {
                 name: 'Ork Boy',
-                armyId: orkId,
+                armyIds: [orkId],
                 gameSystemId: wh40kId,
                 description: 'Ork Boyz are the rank-and-file infantry of an Ork army. What they lack in skill, they make up for in sheer numbers and enthusiasm for a good scrap.',
                 quantity: 20,
@@ -181,8 +181,9 @@ app.delete('/api/armies/:id', async (req, res) => {
     const { id } = req.params;
     if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid ID format' });
     
-    // Cascade delete associated models
-    await modelsCollection.deleteMany({ armyId: id });
+    // Disassociate models from the deleted army, instead of deleting the models.
+    await modelsCollection.updateMany({ armyIds: id }, { $pull: { armyIds: id } });
+    
     const result = await armiesCollection.deleteOne({ _id: new ObjectId(id) });
     if (result.deletedCount === 0) return res.status(404).json({ message: 'Army not found' });
     

@@ -21,7 +21,7 @@ export interface Army {
 export interface Model {
   id: string; // Unique identifier
   name: string;
-  armyId: string; // Foreign key linking to an Army
+  armyIds: string[]; // Foreign keys linking to one or more Armies
   gameSystemId: string; // Foreign key linking to a GameSystem
   description: string;
   quantity: number; // How many of this model the user owns

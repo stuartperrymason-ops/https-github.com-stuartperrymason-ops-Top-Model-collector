@@ -87,11 +87,18 @@ const BulkDataPage: React.FC = () => {
                 return;
             }
 
-            const army = armies.find(a => a.name.trim().toLowerCase() === armyName.trim().toLowerCase() && a.gameSystemId === gameSystem.id);
-            if (!army) {
-                results.push({ row, data: null, status: 'ERROR', errorMessage: `Army "${armyName}" not found in "${gameSystemName}".`, import: false, rowIndex: index });
+            const armyNames = armyName.split(',').map(name => name.trim());
+            const foundArmies = armies.filter(a =>
+                a.gameSystemId === gameSystem.id &&
+                armyNames.some(an => an.toLowerCase() === a.name.toLowerCase())
+            );
+
+            if (foundArmies.length !== armyNames.length) {
+                const missingArmies = armyNames.filter(an => !foundArmies.some(fa => fa.name.toLowerCase() === an.toLowerCase()));
+                results.push({ row, data: null, status: 'ERROR', errorMessage: `Armies not found in "${gameSystemName}": ${missingArmies.join(', ')}.`, import: false, rowIndex: index });
                 return;
             }
+            const armyIds = foundArmies.map(a => a.id);
             
             const quantityNum = parseInt(quantity, 10);
             const formattedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
@@ -106,12 +113,15 @@ const BulkDataPage: React.FC = () => {
                 return;
             }
             
-            const isDuplicate = models.some(m => m.name.trim().toLowerCase() === name.trim().toLowerCase() && m.armyId === army.id);
+            const isDuplicate = models.some(m => 
+                m.name.trim().toLowerCase() === name.trim().toLowerCase() && 
+                m.armyIds.some(id => armyIds.includes(id))
+            );
             
             const modelData = {
                 name: name.trim(),
                 gameSystemId: gameSystem.id,
-                armyId: army.id,
+                armyIds: armyIds,
                 quantity: quantityNum,
                 status: formattedStatus,
                 description: '',
@@ -209,6 +219,9 @@ const BulkDataPage: React.FC = () => {
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">army</code>,
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">quantity</code>, and
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code>.
+                    </p>
+                    <p>
+                        To assign multiple armies, separate their names with a comma in the <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">army</code> column (e.g., "Army A, Army B").
                     </p>
                     <p>
                         The <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">status</code> column must contain one of the following values (case-insensitive): Purchased, Printed, Assembled, Primed, Painted, Based, Ready to Game.

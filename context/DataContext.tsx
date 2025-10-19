@@ -151,8 +151,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     try {
       await apiService.deleteArmy(id);
       setArmies(prev => prev.filter(a => a.id !== id));
-      // Also delete associated models
-      setModels(prev => prev.filter(m => m.armyId !== id));
+      // Also disassociate models from the deleted army
+      setModels(prev =>
+        prev.map(model => {
+          if (model.armyIds.includes(id)) {
+            return { ...model, armyIds: model.armyIds.filter(armyId => armyId !== id) };
+          }
+          return model;
+        })
+      );
       addToast('Army deleted successfully!', 'success');
     } catch (err) {
       console.error('Failed to delete army:', err);

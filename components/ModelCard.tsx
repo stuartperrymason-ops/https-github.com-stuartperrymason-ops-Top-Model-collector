@@ -21,7 +21,9 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
   const { gameSystems, armies, deleteModel } = useData();
 
   const gameSystem = gameSystems.find(gs => gs.id === model.gameSystemId);
-  const army = armies.find(a => a.id === model.armyId);
+  const associatedArmies = armies.filter(a => model.armyIds.includes(a.id));
+  const armyNames = associatedArmies.map(a => a.name).join(', ');
+
 
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete ${model.name}?`)) {
@@ -79,7 +81,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, isBulkEditMode, is
       )}
       <div className="p-4">
         <h3 className="text-xl font-bold text-white mb-2">{model.name}</h3>
-        <p className="text-sm text-text-secondary mb-1">{army?.name || 'Unknown Army'}</p>
+        <p className="text-sm text-text-secondary mb-1">{armyNames || 'No Army Assigned'}</p>
         <p className="text-xs text-gray-400 mb-4">{gameSystem?.name || 'Unknown System'}</p>
         
         <div className="flex justify-between items-center mb-4">
