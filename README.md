@@ -90,12 +90,12 @@ graph TD
     C --> D[Validate each row check for errors, find duplicates];
     D --> E[Any new items, duplicates, or errors?];
     E -- No --> F[Finalize Import];
-    E -- Yes --> G[Show Review Modal];
-    G --> H[User confirms choices & clicks "Confirm"];
+    E -- Yes --> G[Show Review Modal]
+    G --> H[User confirms choices & clicks Confirm];
     H --> F;
     F --> I[1. Create new Game Systems in DB];
     I --> J[2. Create new Armies in DB];
-    J --> K[3. Prepare final model list (resolve names to new IDs)];
+    J --> K[3. Prepare final model list and resolve names to new IDs];
     K --> L[4. Call `bulkAddModels` to save to DB];
     L --> M[Show Import Summary Modal];
     M --> N[End];
