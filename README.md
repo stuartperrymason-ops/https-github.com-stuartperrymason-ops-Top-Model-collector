@@ -15,47 +15,6 @@ Welcome to ModelForge, your digital armory for managing tabletop miniatures. Thi
 - **Customizable Settings**: Manage the game systems and armies that make up your collection.
 - **AI-Powered Descriptions**: Use the Gemini API to automatically generate rich, flavorful descriptions for your models.
 
-## Getting Started
-
-Follow these instructions to get a copy of the project up and running on your local machine.
-
-### Prerequisites
-
-You will need to have [Node.js](https://nodejs.org/) (version 18.x or later) and a package manager like [npm](https://www.npmjs.com/) installed.
-
-### Installation & Setup
-
-1.  **Clone the repository or download the source code:**
-    ```bash
-    git clone <repository-url>
-    cd <project-directory>
-    ```
-
-2.  **Install dependencies:**
-    Open your terminal in the project's root directory and run:
-    ```bash
-    npm install
-    ```
-
-### Running the Development Server
-
-Once the dependencies are installed, you can start the Vite development server:
-
-```bash
-npm run dev
-```
-
-Open your web browser and navigate to the local URL provided by Vite (usually `http://localhost:5173`) to see the application running.
-
-## Building for Production
-
-When you are ready to create a production-ready version of your application, you can run the build command:
-
-```bash
-npm run build
-```
-
-This command will compile the TypeScript/React code and bundle it into a `dist` directory. You can deploy this `dist` folder to any static site hosting service.
 
 
 ---
@@ -70,26 +29,24 @@ This diagram shows the high-level architecture, from the user interface down to 
 
 ```mermaid
 graph TD
-    subgraph "Frontend Browser"
-        UI[UI Components Pages & Modals] --> State[DataContext Global State]
-        State --> UI
-        State --> API[apiService.ts]
+    subgraph Frontend (Browser)
+        A[UI Components <br>(Pages & Modals)] -- Calls functions --> B(DataContext <br>Global State);
+        B -- Updates state & triggers re-render --> A;
+        B -- Calls API methods --> C(apiService.ts);
     end
 
-    subgraph "Backend Server"
-        Server[Express Server server.js] --> DB[MongoDB]
+    subgraph Backend (Server)
+        D[Express Server <br>(server.js)] -- CRUD operations --> E(MongoDB);
     end
 
-    API --> Server
-    Server --> API
+    C -- HTTP Requests (fetch) --> D;
+    D -- HTTP Responses (JSON) --> C;
 
-    style UI fill:#8d99ae,stroke:#2b2d42,stroke-width:2px
-    style State fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
-    style API fill:#bde0fe,stroke:#2b2d42,stroke-width:2px
-    style Server fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
-    style DB fill:#a7c957,stroke:#2b2d42,stroke-width:2px
-
-
+    style A fill:#8d99ae,stroke:#2b2d42,stroke-width:2px
+    style B fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
+    style C fill:#bde0fe,stroke:#2b2d42,stroke-width:2px
+    style D fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
+    style E fill:#a7c957,stroke:#2b2d42,stroke-width:2px
 ```
 
 ### 2. User Interaction: Adding a New Model
@@ -128,17 +85,17 @@ This flowchart illustrates the logic behind the CSV import feature, from file pa
 
 ```mermaid
 graph TD
-    A[Start] --> B[User selects CSV file];
+    A[Start] --> B{User selects CSV file};
     B --> C[Parse CSV using PapaParse];
-    C --> D[Validate each row check for errors, find duplicates];
-    D --> E[Any new items, duplicates, or errors?];
+    C --> D{Validate each row <br>(check for errors, find duplicates)};
+    D --> E{Any new items, duplicates, or errors?};
     E -- No --> F[Finalize Import];
-    E -- Yes --> G[Show Review Modal]
-    G --> H[User confirms choices & clicks hConfirm];
+    E -- Yes --> G[Show Review Modal];
+    G --> H{User confirms choices & clicks "Confirm"};
     H --> F;
     F --> I[1. Create new Game Systems in DB];
     I --> J[2. Create new Armies in DB];
-    J --> K[3. Prepare final model list and resolve names to new IDs];
+    J --> K[3. Prepare final model list <br>(resolve names to new IDs)];
     K --> L[4. Call `bulkAddModels` to save to DB];
     L --> M[Show Import Summary Modal];
     M --> N[End];
