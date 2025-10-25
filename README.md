@@ -56,6 +56,8 @@ npm run build
 ```
 
 This command will compile the TypeScript/React code and bundle it into a `dist` directory. You can deploy this `dist` folder to any static site hosting service.
+
+
 ---
 
 ## Application Flow Diagrams
