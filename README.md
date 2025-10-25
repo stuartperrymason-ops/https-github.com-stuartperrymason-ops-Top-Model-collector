@@ -29,13 +29,13 @@ This diagram shows the high-level architecture, from the user interface down to 
 ```mermaid
 graph TD
     subgraph Frontend (Browser)
-        A[UI Components <br>(Pages & Modals)] -- Calls functions --> B(DataContext <br>Global State);
+        A[UI Components (Pages & Modals)] -- Calls functions --> B(DataContext Global State);
         B -- Updates state & triggers re-render --> A;
         B -- Calls API methods --> C(apiService.ts);
     end
 
     subgraph Backend (Server)
-        D[Express Server <br>(server.js)] -- CRUD operations --> E(MongoDB);
+        D[Express Server (server.js)] -- CRUD operations --> E(MongoDB);
     end
 
     C -- HTTP Requests (fetch) --> D;
@@ -84,17 +84,17 @@ This flowchart illustrates the logic behind the CSV import feature. New game sys
 
 ```mermaid
 graph TD
-    A[Start] --> B{User selects CSV file};
+    A[Start] --> B[User selects CSV file];
     B --> C[Parse CSV using PapaParse];
-    C --> D{Validate each row <br>(check for errors, find duplicates)};
-    D --> E{Any new items, duplicates, or errors?};
+    C --> D[Validate each row (check for errors, find duplicates)];
+    D --> E[Any new items, duplicates, or errors?];
     E -- No --> F[Finalize Import];
     E -- Yes --> G[Show Review Modal];
-    G --> H{User confirms choices & clicks "Confirm"};
+    G --> H[User confirms choices & clicks Confirm];
     H --> F;
-    F --> I[1. Create new Game Systems in DB <br>(with default color scheme)];
+    F --> I[1. Create new Game Systems in DB (with default color scheme)];
     I --> J[2. Create new Armies in DB];
-    J --> K[3. Prepare final model list <br>(resolve names to new IDs)];
+    J --> K[3. Prepare final model list (resolve names to new IDs)];
     K --> L[4. Call `bulkAddModels` to save to DB];
     L --> M[Show Import Summary Modal];
     M --> N[End];
