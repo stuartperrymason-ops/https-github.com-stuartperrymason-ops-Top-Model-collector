@@ -140,7 +140,7 @@ const CalendarPage: React.FC = () => {
                                             >
                                                 <span
                                                     className="w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0 border border-black/20"
-                                                    style={{ backgroundColor: systemInfo ? systemInfo.color : 'transparent' }}
+                                                    style={{ backgroundColor: systemInfo ? systemInfo.color : '#4b5563' }}
                                                 ></span>
                                                 <span className="text-white text-xs truncate">{session.title}</span>
                                             </div>
