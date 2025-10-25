@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { GameSystem, Army, Model, ToastMessage } from '../types';
+import { GameSystem, Army, Model, ToastMessage, PaintingSession } from '../types';
 import * as apiService from '../services/apiService';
 
 // Define the shape of the context state. This interface describes all the data
@@ -16,6 +16,7 @@ interface DataContextState {
   gameSystems: GameSystem[];
   armies: Army[];
   models: Model[];
+  paintingSessions: PaintingSession[];
   loading: boolean; // Indicates if initial data is being fetched.
   error: string | null; // Stores any critical error messages.
   toasts: ToastMessage[]; // An array of active toast notifications.
@@ -38,6 +39,10 @@ interface DataContextState {
   bulkUpdateModels: (ids: string[], updates: Partial<Omit<Model, 'id'>>) => Promise<void>;
   bulkDeleteModels: (ids: string[]) => Promise<void>;
   bulkAddModels: (models: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>[]) => Promise<void>;
+  // Painting Session functions
+  addPaintingSession: (session: Omit<PaintingSession, 'id'>) => Promise<void>;
+  updatePaintingSession: (id: string, session: Partial<Omit<PaintingSession, 'id'>>) => Promise<void>;
+  deletePaintingSession: (id: string) => Promise<void>;
 }
 
 // Create the context with a default value of `undefined`.
@@ -55,6 +60,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [gameSystems, setGameSystems] = useState<GameSystem[]>([]);
   const [armies, setArmies] = useState<Army[]>([]);
   const [models, setModels] = useState<Model[]>([]);
+  const [paintingSessions, setPaintingSessions] = useState<PaintingSession[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -78,15 +84,17 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       // Use Promise.all to fetch all data concurrently for faster loading.
-      const [systems, armyData, modelData] = await Promise.all([
+      const [systems, armyData, modelData, sessionData] = await Promise.all([
         apiService.getGameSystems(),
         apiService.getArmies(),
         apiService.getModels(),
+        apiService.getPaintingSessions(),
       ]);
       // Update state with the fetched data.
       setGameSystems(systems);
       setArmies(armyData);
       setModels(modelData);
+      setPaintingSessions(sessionData);
     } catch (err) {
       const errorMessage = 'Failed to load data. Please try refreshing the page.';
       setError(errorMessage);
@@ -276,11 +284,46 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
 
+  // --- CRUD operations for Painting Sessions ---
+  const addPaintingSession = async (session: Omit<PaintingSession, 'id'>) => {
+    try {
+      const newSession = await apiService.addPaintingSession(session);
+      setPaintingSessions(prev => [...prev, newSession]);
+      addToast('Painting session scheduled!', 'success');
+    } catch (err) {
+      console.error('Failed to add painting session:', err);
+      addToast('Failed to schedule session.', 'error');
+    }
+  };
+
+  const updatePaintingSession = async (id: string, session: Partial<Omit<PaintingSession, 'id'>>) => {
+    try {
+      const updatedSession = await apiService.updatePaintingSession(id, session);
+      setPaintingSessions(prev => prev.map(s => (s.id === id ? updatedSession : s)));
+      addToast('Painting session updated!', 'success');
+    } catch (err) {
+      console.error('Failed to update painting session:', err);
+      addToast('Failed to update session.', 'error');
+    }
+  };
+
+  const deletePaintingSession = async (id: string) => {
+    try {
+      await apiService.deletePaintingSession(id);
+      setPaintingSessions(prev => prev.filter(s => s.id !== id));
+      addToast('Painting session deleted!', 'success');
+    } catch (err) {
+      console.error('Failed to delete painting session:', err);
+      addToast('Failed to delete session.', 'error');
+    }
+  };
+
   // The 'value' object bundles all state and functions to be provided to consuming components.
   const value = {
     gameSystems,
     armies,
     models,
+    paintingSessions,
     loading,
     error,
     toasts,
@@ -297,6 +340,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     bulkAddModels,
     bulkUpdateModels,
     bulkDeleteModels,
+    addPaintingSession,
+    updatePaintingSession,
+    deletePaintingSession,
   };
 
   // The DataContext.Provider makes the 'value' object available to all child components.

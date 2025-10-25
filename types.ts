@@ -39,6 +39,16 @@ export interface Model {
   lastUpdated: string; // ISO 8601 date string of when the model was last updated.
 }
 
+// Represents a painting session event for the calendar.
+export interface PaintingSession {
+  id: string; // Unique identifier.
+  title: string; // The title or goal of the session.
+  start: string; // ISO 8601 date string for the start time.
+  end: string;   // ISO 8601 date string for the end time.
+  notes?: string; // Optional notes or details.
+  modelIds: string[]; // An array of Model IDs linked to this session.
+}
+
 // Represents a temporary notification message (a "toast") shown to the user.
 export type ToastMessage = {
   id: number; // A unique ID (often a timestamp) for managing the toast's lifecycle.

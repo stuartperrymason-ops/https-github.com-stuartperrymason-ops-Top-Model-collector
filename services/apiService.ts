@@ -6,7 +6,7 @@
  * This program was written by Stuart Mason October 2025.
  */
 
-import { GameSystem, Army, Model } from '../types';
+import { GameSystem, Army, Model, PaintingSession } from '../types';
 
 // The base URL for the backend API. In a real application, this would come from an environment variable.
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -139,5 +139,43 @@ export const deleteModel = async (id: string): Promise<void> => {
   });
   if (!response.ok) {
     throw new Error('Failed to delete model');
+  }
+};
+
+// --- Painting Session API calls ---
+
+/** Fetches all painting sessions. */
+export const getPaintingSessions = async (): Promise<PaintingSession[]> => {
+  const response = await fetch(`${API_BASE_URL}/painting-sessions`);
+  return handleResponse<PaintingSession[]>(response);
+};
+
+/** Adds a new painting session. */
+export const addPaintingSession = async (session: Omit<PaintingSession, 'id'>): Promise<PaintingSession> => {
+    const response = await fetch(`${API_BASE_URL}/painting-sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(session),
+    });
+    return handleResponse<PaintingSession>(response);
+};
+
+/** Updates an existing painting session. */
+export const updatePaintingSession = async (id: string, session: Partial<Omit<PaintingSession, 'id'>>): Promise<PaintingSession> => {
+    const response = await fetch(`${API_BASE_URL}/painting-sessions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(session),
+    });
+    return handleResponse<PaintingSession>(response);
+};
+
+/** Deletes a painting session by its ID. */
+export const deletePaintingSession = async (id: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/painting-sessions/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete painting session');
   }
 };

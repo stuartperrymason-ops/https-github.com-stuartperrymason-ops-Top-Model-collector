@@ -11,6 +11,7 @@ Welcome to ModelForge, your digital armory for managing tabletop miniatures. Thi
 
 - **Detailed Collection View**: Browse your entire collection with images, descriptions, and current painting status.
 - **Progress Dashboard**: Visualize your hobby progress with filterable charts breaking down the status of your models by army and game system.
+- **Painting Session Calendar**: Schedule your hobby time, link models to sessions, and keep track of your painting commitments.
 - **Dynamic Theming**: Customize the look and feel of your collection by assigning unique color schemes to each game system.
 - **Bulk Data Management**: Easily import your existing collection from a CSV file.
 - **Customizable Settings**: Manage the game systems (including color themes) and armies that make up your collection.
@@ -131,4 +132,34 @@ sequenceDiagram
     DataContext->>DataContext: Updates `gameSystems` state
     DataContext-->>SettingsPage: Re-renders with updated system list
     GameSystemEditModal->>SettingsPage: Closes modal (onClose)
+```
+
+### 5. User Interaction: Scheduling a Painting Session
+
+This diagram details the flow for adding a new event to the painting calendar.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant CalendarPage
+    participant PaintingSessionFormModal
+    participant DataContext
+    participant apiService
+    participant Server
+    participant Database
+
+    User->>CalendarPage: Clicks to add a new session
+    CalendarPage->>PaintingSessionFormModal: Opens modal
+    User->>PaintingSessionFormModal: Fills out session details (title, date, notes, etc.)
+    User->>PaintingSessionFormModal: Clicks "Save Session"
+    PaintingSessionFormModal->>DataContext: Calls addPaintingSession(sessionData)
+    DataContext->>apiService: Calls addPaintingSession(sessionData)
+    apiService->>Server: POST /api/painting-sessions with session data
+    Server->>Database: Inserts new session document
+    Database-->>Server: Returns new document with ID
+    Server-->>apiService: Returns new session JSON
+    apiService-->>DataContext: Returns new session object
+    DataContext->>DataContext: Updates `paintingSessions` state
+    DataContext-->>CalendarPage: Re-renders with the new session visible
+    PaintingSessionFormModal->>CalendarPage: Closes modal
 ```

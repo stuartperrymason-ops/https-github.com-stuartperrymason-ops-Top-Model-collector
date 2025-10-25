@@ -23,6 +23,7 @@ let db;
 let gameSystemsCollection;
 let armiesCollection;
 let modelsCollection;
+let paintingSessionsCollection;
 
 // --- Middleware ---
 // `cors()` enables Cross-Origin Resource Sharing, allowing the frontend (on a different port) to make requests to this server.
@@ -138,6 +139,7 @@ async function main() {
         gameSystemsCollection = db.collection('game_systems');
         armiesCollection = db.collection('armies');
         modelsCollection = db.collection('models');
+        paintingSessionsCollection = db.collection('painting_sessions');
 
         // Seed the database with initial data if it's empty.
         await seedDatabase();
@@ -385,6 +387,65 @@ app.put('/api/models/:id', async (req, res) => {
 app.delete('/api/models/:id', async (req, res) => {
     const { id } = req.params;
     await modelsCollection.deleteOne({ _id: toMongoId(id) });
+    res.status(204).send();
+});
+
+// --- Painting Sessions Endpoints ---
+app.get('/api/painting-sessions', async (req, res) => {
+    const sessions = await paintingSessionsCollection.find({}).sort({ start: 1 }).toArray();
+    res.json(sessions.map(doc => ({
+        ...fromMongo(doc),
+        modelIds: (doc.modelIds || []).map(id => id.toHexString())
+    })));
+});
+
+app.post('/api/painting-sessions', async (req, res) => {
+    const { title, start, end, notes, modelIds } = req.body;
+    const newSessionData = {
+        title,
+        start,
+        end,
+        notes,
+        modelIds: (modelIds || []).map(id => toMongoId(id)),
+    };
+    const result = await paintingSessionsCollection.insertOne(newSessionData);
+    const newDoc = await paintingSessionsCollection.findOne({ _id: result.insertedId });
+    res.status(201).json({
+        ...fromMongo(newDoc),
+        modelIds: (newDoc.modelIds || []).map(id => id.toHexString())
+    });
+});
+
+app.put('/api/painting-sessions/:id', async (req, res) => {
+    const { id } = req.params;
+    const sessionUpdates = req.body;
+    if (sessionUpdates.modelIds) {
+        sessionUpdates.modelIds = sessionUpdates.modelIds.map(id => toMongoId(id));
+    }
+    delete sessionUpdates.id;
+
+    const result = await paintingSessionsCollection.findOneAndUpdate(
+        { _id: toMongoId(id) },
+        { $set: sessionUpdates },
+        { returnDocument: 'after' }
+    );
+
+    if (!result) {
+        return res.status(404).json({ message: 'Painting session not found.' });
+    }
+
+    res.json({
+        ...fromMongo(result),
+        modelIds: (result.modelIds || []).map(id => id.toHexString())
+    });
+});
+
+app.delete('/api/painting-sessions/:id', async (req, res) => {
+    const { id } = req.params;
+    const result = await paintingSessionsCollection.deleteOne({ _id: toMongoId(id) });
+    if (result.deletedCount === 0) {
+        return res.status(404).json({ message: 'Painting session not found.' });
+    }
     res.status(204).send();
 });
 
