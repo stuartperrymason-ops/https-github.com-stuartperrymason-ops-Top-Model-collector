@@ -8,20 +8,30 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ObjectId } = require('mongodb');
 
-const app = express();
-const PORT = 3001;
-
-// MongoDB connection settings. The connection string is read from MONGODB_URI environment variable.
-// If it's not set, it defaults to a MongoDB Atlas connection string which requires a DB_PASSWORD environment variable.
-if (!process.env.MONGODB_URI && !process.env.DB_PASSWORD) {
-    console.error('FATAL ERROR: To connect to the default MongoDB Atlas database, a DB_PASSWORD environment variable must be set. Alternatively, provide a full MONGODB_URI.');
-    process.exit(1);
+const { MongoClient, ServerApiVersion } = require('mongodb');
+const uri = "mongodb+srv://stuartperrymason_db_user:vfVZ89HW@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector";
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+async function run() {
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
+    await client.connect();
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+    // Ensures that the client will close when you finish/error
+    await client.close();
+  }
 }
-const MONGODB_URI = process.env.MONGODB_URI || `mongodb+srv://stuartperrymason_db_user:${process.env.DB_PASSWORD}@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector`;
-const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
-const client = new MongoClient(MONGODB_URI);
+run().catch(console.dir);
 
 // Global variables to hold references to the database and collections once connected.
 let db;
