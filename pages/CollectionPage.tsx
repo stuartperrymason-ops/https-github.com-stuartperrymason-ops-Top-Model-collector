@@ -37,7 +37,7 @@ const CollectionPage: React.FC = () => {
   const [isBulkEditMode, setIsBulkEditMode] = useState(false);
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
   // State for the status to be applied during a bulk update.
-  const [bulkStatus, setBulkStatus] = = useState<Model['status']>('Purchased');
+  const [bulkStatus, setBulkStatus] = useState<Model['status']>('Purchased');
   
 
   // --- Modal Handlers ---
