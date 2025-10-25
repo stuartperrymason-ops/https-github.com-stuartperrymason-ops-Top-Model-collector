@@ -146,6 +146,7 @@ const seedDatabase = async () => {
                     manufacturer: 'Citadel',
                     colorScheme: 'Blue',
                     rgbCode: '#0d4e8a',
+                    stock: 1,
                 },
                 {
                     name: 'Mephiston Red',
@@ -153,6 +154,7 @@ const seedDatabase = async () => {
                     manufacturer: 'Citadel',
                     colorScheme: 'Red',
                     rgbCode: '#9b100e',
+                    stock: 2,
                 },
                 {
                     name: 'Nuln Oil',
@@ -160,6 +162,7 @@ const seedDatabase = async () => {
                     manufacturer: 'Citadel',
                     colorScheme: 'Black',
                     rgbCode: '#3c3c3c',
+                    stock: 1,
                 },
                  {
                     name: 'Leather Brown',
@@ -167,6 +170,7 @@ const seedDatabase = async () => {
                     manufacturer: 'Vallejo',
                     colorScheme: 'Brown',
                     rgbCode: '#8b4513',
+                    stock: 1,
                 }
             ]);
         }
@@ -523,13 +527,13 @@ app.get('/api/paints', async (req, res) => {
 
 app.post('/api/paints', async (req, res) => {
     try {
-        const { name, paintType, manufacturer, colorScheme, rgbCode } = req.body;
+        const { name, paintType, manufacturer, colorScheme, rgbCode, stock } = req.body;
         // Basic validation
         if (!name || !paintType || !manufacturer || !colorScheme) {
             return res.status(400).json({ message: 'Missing required fields: name, paintType, manufacturer, colorScheme.' });
         }
         
-        const newPaintData = { name, paintType, manufacturer, colorScheme, rgbCode };
+        const newPaintData = { name, paintType, manufacturer, colorScheme, rgbCode, stock: Number(stock) || 0 };
         const result = await paintsCollection.insertOne(newPaintData);
         const newPaint = await paintsCollection.findOne({ _id: result.insertedId });
         res.status(201).json(fromMongo(newPaint));
@@ -542,7 +546,7 @@ app.post('/api/paints', async (req, res) => {
 app.put('/api/paints/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, paintType, manufacturer, colorScheme, rgbCode } = req.body;
+        const { name, paintType, manufacturer, colorScheme, rgbCode, stock } = req.body;
         const updateData = {};
 
         if (name !== undefined) updateData.name = name;
@@ -551,6 +555,7 @@ app.put('/api/paints/:id', async (req, res) => {
         if (colorScheme !== undefined) updateData.colorScheme = colorScheme;
         // Allow setting rgbCode to an empty string to clear it
         if (rgbCode !== undefined) updateData.rgbCode = rgbCode;
+        if (stock !== undefined) updateData.stock = Number(stock);
 
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ message: 'No update data provided.' });

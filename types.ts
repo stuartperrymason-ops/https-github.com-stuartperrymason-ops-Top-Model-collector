@@ -58,6 +58,7 @@ export interface Paint {
   manufacturer: string; // The company that produces the paint, e.g., "Citadel".
   colorScheme: string; // The general color family, e.g., "Blue", "Metallic".
   rgbCode?: string; // Optional hex code for the color, e.g., "#0d4e8a".
+  stock: number; // The quantity of this paint the user owns.
 }
 
 // Represents a temporary notification message (a "toast") shown to the user.
