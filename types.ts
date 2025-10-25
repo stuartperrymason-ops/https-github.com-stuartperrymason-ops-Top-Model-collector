@@ -50,6 +50,16 @@ export interface PaintingSession {
   gameSystemId?: string; // Optional foreign key linking to a GameSystem.
 }
 
+// Represents a single paint in the user's collection.
+export interface Paint {
+  id: string; // Unique identifier.
+  name: string; // The name of the paint, e.g., "Macragge Blue".
+  paintType: 'Base' | 'Layer' | 'Shade' | 'Contrast' | 'Technical' | 'Dry' | 'Air'; // The type of paint.
+  manufacturer: string; // The company that produces the paint, e.g., "Citadel".
+  colorScheme: string; // The general color family, e.g., "Blue", "Metallic".
+  rgbCode?: string; // Optional hex code for the color, e.g., "#0d4e8a".
+}
+
 // Represents a temporary notification message (a "toast") shown to the user.
 export type ToastMessage = {
   id: number; // A unique ID (often a timestamp) for managing the toast's lifecycle.

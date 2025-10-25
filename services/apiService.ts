@@ -6,7 +6,7 @@
  * This program was written by Stuart Mason October 2025.
  */
 
-import { GameSystem, Army, Model, PaintingSession } from '../types';
+import { GameSystem, Army, Model, PaintingSession, Paint } from '../types';
 
 // The base URL for the backend API. In a real application, this would come from an environment variable.
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -177,5 +177,43 @@ export const deletePaintingSession = async (id: string): Promise<void> => {
   });
   if (!response.ok) {
     throw new Error('Failed to delete painting session');
+  }
+};
+
+// --- Paint API calls ---
+
+/** Fetches all paints from the server. */
+export const getPaints = async (): Promise<Paint[]> => {
+  const response = await fetch(`${API_BASE_URL}/paints`);
+  return handleResponse<Paint[]>(response);
+};
+
+/** Adds a new paint to the database. */
+export const addPaint = async (paint: Omit<Paint, 'id'>): Promise<Paint> => {
+  const response = await fetch(`${API_BASE_URL}/paints`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(paint),
+  });
+  return handleResponse<Paint>(response);
+};
+
+/** Updates an existing paint. */
+export const updatePaint = async (id: string, paint: Partial<Omit<Paint, 'id'>>): Promise<Paint> => {
+    const response = await fetch(`${API_BASE_URL}/paints/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(paint),
+    });
+    return handleResponse<Paint>(response);
+  };
+  
+/** Deletes a paint by its ID. */
+export const deletePaint = async (id: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/paints/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete paint');
   }
 };

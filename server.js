@@ -13,8 +13,13 @@ const { MongoClient, ObjectId } = require('mongodb');
 const app = express();
 const PORT = 3001;
 
-// MongoDB connection settings, read from environment variables with sensible defaults.
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
+// MongoDB connection settings. The connection string is read from MONGODB_URI environment variable.
+// If it's not set, it defaults to a MongoDB Atlas connection string which requires a DB_PASSWORD environment variable.
+if (!process.env.MONGODB_URI && !process.env.DB_PASSWORD) {
+    console.error('FATAL ERROR: To connect to the default MongoDB Atlas database, a DB_PASSWORD environment variable must be set. Alternatively, provide a full MONGODB_URI.');
+    process.exit(1);
+}
+const MONGODB_URI = process.env.MONGODB_URI || `mongodb+srv://stuartperrymason_db_user:${process.env.DB_PASSWORD}@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector`;
 const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
 const client = new MongoClient(MONGODB_URI);
 
@@ -24,6 +29,7 @@ let gameSystemsCollection;
 let armiesCollection;
 let modelsCollection;
 let paintingSessionsCollection;
+let paintsCollection;
 
 // --- Middleware ---
 // `cors()` enables Cross-Origin Resource Sharing, allowing the frontend (on a different port) to make requests to this server.
@@ -38,7 +44,8 @@ app.use(express.json());
 const seedDatabase = async () => {
     try {
         const systemCount = await gameSystemsCollection.countDocuments();
-        if (systemCount > 0) {
+        const paintCount = await paintsCollection.countDocuments();
+        if (systemCount > 0 && paintCount > 0) {
             console.log('Database already contains data. Skipping seed.');
             return;
         }
@@ -119,6 +126,40 @@ const seedDatabase = async () => {
                 lastUpdated: now,
             }
         ]);
+        
+        // --- Paints ---
+        if (paintCount === 0) {
+            await paintsCollection.insertMany([
+                {
+                    name: 'Macragge Blue',
+                    paintType: 'Base',
+                    manufacturer: 'Citadel',
+                    colorScheme: 'Blue',
+                    rgbCode: '#0d4e8a',
+                },
+                {
+                    name: 'Mephiston Red',
+                    paintType: 'Base',
+                    manufacturer: 'Citadel',
+                    colorScheme: 'Red',
+                    rgbCode: '#9b100e',
+                },
+                {
+                    name: 'Nuln Oil',
+                    paintType: 'Shade',
+                    manufacturer: 'Citadel',
+                    colorScheme: 'Black',
+                    rgbCode: '#3c3c3c',
+                },
+                 {
+                    name: 'Leather Brown',
+                    paintType: 'Layer',
+                    manufacturer: 'Vallejo',
+                    colorScheme: 'Brown',
+                    rgbCode: '#8b4513',
+                }
+            ]);
+        }
 
         console.log('Database seeded successfully.');
 
@@ -140,6 +181,7 @@ async function main() {
         armiesCollection = db.collection('armies');
         modelsCollection = db.collection('models');
         paintingSessionsCollection = db.collection('painting_sessions');
+        paintsCollection = db.collection('paints');
 
         // Seed the database with initial data if it's empty.
         await seedDatabase();
@@ -461,6 +503,84 @@ app.delete('/api/painting-sessions/:id', async (req, res) => {
         return res.status(404).json({ message: 'Painting session not found.' });
     }
     res.status(204).send();
+});
+
+// --- Paints Endpoints ---
+app.get('/api/paints', async (req, res) => {
+    const paints = await paintsCollection.find({}).sort({ manufacturer: 1, name: 1 }).toArray();
+    res.json(paints.map(fromMongo));
+});
+
+app.post('/api/paints', async (req, res) => {
+    try {
+        const { name, paintType, manufacturer, colorScheme, rgbCode } = req.body;
+        // Basic validation
+        if (!name || !paintType || !manufacturer || !colorScheme) {
+            return res.status(400).json({ message: 'Missing required fields: name, paintType, manufacturer, colorScheme.' });
+        }
+        
+        const newPaintData = { name, paintType, manufacturer, colorScheme, rgbCode };
+        const result = await paintsCollection.insertOne(newPaintData);
+        const newPaint = await paintsCollection.findOne({ _id: result.insertedId });
+        res.status(201).json(fromMongo(newPaint));
+    } catch (error) {
+        console.error('Error adding paint:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+app.put('/api/paints/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, paintType, manufacturer, colorScheme, rgbCode } = req.body;
+        const updateData = {};
+
+        if (name !== undefined) updateData.name = name;
+        if (paintType !== undefined) updateData.paintType = paintType;
+        if (manufacturer !== undefined) updateData.manufacturer = manufacturer;
+        if (colorScheme !== undefined) updateData.colorScheme = colorScheme;
+        // Allow setting rgbCode to an empty string to clear it
+        if (rgbCode !== undefined) updateData.rgbCode = rgbCode;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: 'No update data provided.' });
+        }
+        
+        const result = await paintsCollection.findOneAndUpdate(
+            { _id: toMongoId(id) }, 
+            { $set: updateData },
+            { returnDocument: 'after' }
+        );
+
+        if (!result) {
+            return res.status(404).json({ message: 'Paint not found.' });
+        }
+        
+        res.json(fromMongo(result));
+    } catch (error) {
+        if (error.name === 'BSONError') {
+             return res.status(400).json({ message: 'Invalid ID format.' });
+        }
+        console.error('Error updating paint:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+app.delete('/api/paints/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await paintsCollection.deleteOne({ _id: toMongoId(id) });
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: 'Paint not found.' });
+        }
+        res.status(204).send();
+    } catch (error) {
+         if (error.name === 'BSONError') {
+             return res.status(400).json({ message: 'Invalid ID format.' });
+        }
+        console.error('Error deleting paint:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 // Start the application.
