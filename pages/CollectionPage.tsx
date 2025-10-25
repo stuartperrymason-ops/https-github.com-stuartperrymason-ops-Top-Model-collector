@@ -51,43 +51,47 @@ const CollectionPage: React.FC = () => {
   // State for the status to be applied during a bulk update.
   const [bulkStatus, setBulkStatus] = useState<Model['status']>('Purchased');
   
-  // Effect for dynamic theming based on the selected game system.
+  // --- Dynamic Theming Effects ---
+
+  // This effect applies the selected theme based on the gameSystemFilter.
+  // It runs whenever the filter or the list of game systems changes.
   useEffect(() => {
     const mainElement = document.querySelector('main');
     if (!mainElement) return;
-
     const root = document.documentElement;
 
-    // A helper function to reset all theme-related styles to their defaults.
-    const resetToDefault = () => {
-        root.style.removeProperty('--theme-primary-color');
-        root.style.removeProperty('--theme-secondary-color');
-        mainElement.style.removeProperty('background-color');
-        mainElement.classList.remove('transition-colors', 'duration-500');
-    };
+    const selectedSystem = gameSystems.find(gs => gs.id === gameSystemFilter);
 
-    if (gameSystemFilter) {
-      const selectedSystem = gameSystems.find(gs => gs.id === gameSystemFilter);
-      // If the selected system exists and has a color scheme defined, apply it.
-      if (selectedSystem && selectedSystem.colorScheme) {
-        root.style.setProperty('--theme-primary-color', selectedSystem.colorScheme.primary);
-        root.style.setProperty('--theme-secondary-color', selectedSystem.colorScheme.secondary);
-        mainElement.style.backgroundColor = selectedSystem.colorScheme.background;
-        mainElement.classList.add('transition-colors', 'duration-500');
-      } else {
-        resetToDefault();
-      }
+    if (selectedSystem && selectedSystem.colorScheme) {
+      // A theme is selected; apply its colors.
+      root.style.setProperty('--theme-primary-color', selectedSystem.colorScheme.primary);
+      root.style.setProperty('--theme-secondary-color', selectedSystem.colorScheme.secondary);
+      mainElement.style.backgroundColor = selectedSystem.colorScheme.background;
+      mainElement.classList.add('transition-colors', 'duration-500');
     } else {
-      // If no filter is applied, reset to the default theme.
-      resetToDefault();
+      // No theme is selected, or the selected system has no theme; remove custom styles.
+      root.style.removeProperty('--theme-primary-color');
+      root.style.removeProperty('--theme-secondary-color');
+      mainElement.style.removeProperty('background-color');
+      mainElement.classList.remove('transition-colors', 'duration-500');
     }
-
-    // The cleanup function of the effect is crucial. It runs when the component unmounts
-    // or before the effect re-runs, ensuring that the theme doesn't "leak" to other pages.
-    return () => {
-        resetToDefault();
-    };
   }, [gameSystemFilter, gameSystems]);
+
+  // This effect is responsible ONLY for cleaning up the theme when the component unmounts.
+  // The empty dependency array `[]` ensures its cleanup function runs just once.
+  useEffect(() => {
+    const mainElement = document.querySelector('main');
+    if (!mainElement) return () => {}; // Should not happen, but good practice.
+    const root = document.documentElement;
+    
+    return () => {
+      // Reset all theme styles when navigating away from the collection page.
+      root.style.removeProperty('--theme-primary-color');
+      root.style.removeProperty('--theme-secondary-color');
+      mainElement.style.removeProperty('background-color');
+      mainElement.classList.remove('transition-colors', 'duration-500');
+    };
+  }, []);
 
 
   // --- Modal Handlers ---
@@ -332,7 +336,7 @@ const CollectionPage: React.FC = () => {
       ) : (
         <div className="text-center py-16 bg-surface rounded-lg border border-border">
             <div className="flex justify-center mb-4">
-                <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 S0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
             </div>
           {models.length === 0 ? (
             <>
