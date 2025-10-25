@@ -18,7 +18,9 @@ const PaintEditModal: React.FC<{
     const [formData, setFormData] = useState<Omit<Paint, 'id'>>(paint);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        const { name, value, type } = e.target;
+        const isNumber = type === 'number';
+        setFormData(prev => ({ ...prev, [name]: isNumber ? parseInt(value, 10) || 0 : value }));
     };
 
     const handleSave = (e: React.FormEvent) => {
@@ -58,13 +60,17 @@ const PaintEditModal: React.FC<{
                             <label htmlFor="edit-colorScheme" className="block text-sm font-medium text-text-secondary mb-1">Color Scheme</label>
                             <input id="edit-colorScheme" name="colorScheme" type="text" value={formData.colorScheme} onChange={handleChange} required className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
                         </div>
-                        <div className="flex items-end gap-2">
-                             <div className="flex-grow">
-                                <label htmlFor="edit-rgbCode" className="block text-sm font-medium text-text-secondary mb-1">RGB Code</label>
-                                <input id="edit-rgbCode" name="rgbCode" type="text" value={formData.rgbCode || ''} onChange={handleChange} placeholder="#RRGGBB" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <input type="color" value={formData.rgbCode || '#ffffff'} onChange={(e) => handleChange({ ...e, target: { ...e.target, name: 'rgbCode' }})} className="h-10 w-12 p-1 bg-background border border-border rounded-md cursor-pointer"/>
+                        <div>
+                            <label htmlFor="edit-stock" className="block text-sm font-medium text-text-secondary mb-1">Stock</label>
+                            <input id="edit-stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required min="0" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
                         </div>
+                    </div>
+                    <div className="flex items-end gap-2">
+                         <div className="flex-grow">
+                            <label htmlFor="edit-rgbCode" className="block text-sm font-medium text-text-secondary mb-1">RGB Code</label>
+                            <input id="edit-rgbCode" name="rgbCode" type="text" value={formData.rgbCode || ''} onChange={handleChange} placeholder="#RRGGBB" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+                        </div>
+                        <input type="color" value={formData.rgbCode || '#ffffff'} onChange={(e) => handleChange({ ...e, target: { ...e.target, name: 'rgbCode' }})} className="h-10 w-12 p-1 bg-background border border-border rounded-md cursor-pointer"/>
                     </div>
                     <div className="flex justify-end gap-4 mt-6">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700">Cancel</button>
@@ -84,15 +90,19 @@ const PaintsPage: React.FC = () => {
         manufacturer: '',
         colorScheme: '',
         rgbCode: '#ffffff',
+        stock: 1,
     };
     const [newPaint, setNewPaint] = useState(defaultPaint);
     const [editingPaint, setEditingPaint] = useState<Paint | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [manufacturerFilter, setManufacturerFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
+    const [sortOption, setSortOption] = useState<string>('name-asc');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setNewPaint({ ...newPaint, [e.target.name]: e.target.value });
+        const { name, value, type } = e.target;
+        const isNumber = type === 'number';
+        setNewPaint({ ...newPaint, [name]: isNumber ? parseInt(value, 10) || 0 : value });
     };
 
     const handleAddPaint = (e: React.FormEvent) => {
@@ -112,12 +122,35 @@ const PaintsPage: React.FC = () => {
     const uniqueManufacturers = useMemo(() => [...new Set(paints.map(p => p.manufacturer))], [paints]);
     const paintTypes: Paint['paintType'][] = ['Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air'];
 
-    const filteredPaints = useMemo(() => {
-        return paints
+    const sortedAndFilteredPaints = useMemo(() => {
+        const filtered = paints
             .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
             .filter(p => !manufacturerFilter || p.manufacturer === manufacturerFilter)
             .filter(p => !typeFilter || p.paintType === typeFilter);
-    }, [paints, searchQuery, manufacturerFilter, typeFilter]);
+
+        const sortable = [...filtered];
+
+        sortable.sort((a, b) => {
+            switch (sortOption) {
+                case 'name-asc':
+                    return a.name.localeCompare(b.name);
+                case 'name-desc':
+                    return b.name.localeCompare(a.name);
+                case 'manufacturer-asc':
+                    return a.manufacturer.localeCompare(b.manufacturer);
+                case 'manufacturer-desc':
+                    return b.manufacturer.localeCompare(a.manufacturer);
+                case 'stock-desc':
+                    return b.stock - a.stock;
+                case 'stock-asc':
+                    return a.stock - b.stock;
+                default:
+                    return a.name.localeCompare(b.name);
+            }
+        });
+
+        return sortable;
+    }, [paints, searchQuery, manufacturerFilter, typeFilter, sortOption]);
 
     if (loading) return <div className="flex justify-center items-center h-full"><p>Loading paints...</p></div>;
     if (error) return <div className="flex justify-center items-center h-full"><p className="text-red-500">{error}</p></div>;
@@ -130,13 +163,14 @@ const PaintsPage: React.FC = () => {
             <div className="bg-surface p-6 rounded-lg shadow-md border border-border mb-8">
                 <h2 className="text-2xl font-semibold text-white mb-4">Add New Paint</h2>
                 <form onSubmit={handleAddPaint} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                         <input name="name" type="text" value={newPaint.name} onChange={handleInputChange} placeholder="Paint Name" required className="lg:col-span-2 bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
                         <input name="manufacturer" type="text" value={newPaint.manufacturer} onChange={handleInputChange} placeholder="Manufacturer" required className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
                         <select name="paintType" value={newPaint.paintType} onChange={handleInputChange} required className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
                              {paintTypes.map(type => <option key={type} value={type}>{type}</option>)}
                         </select>
                         <input name="colorScheme" type="text" value={newPaint.colorScheme} onChange={handleInputChange} placeholder="Color Scheme" required className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+                        <input name="stock" type="number" value={newPaint.stock} onChange={handleInputChange} placeholder="Stock" required min="0" className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
                     </div>
                     <div className="flex items-end gap-4">
                         <div className="flex-grow max-w-xs">
@@ -163,6 +197,18 @@ const PaintsPage: React.FC = () => {
                         <option value="">All Types</option>
                         {paintTypes.map(type => <option key={type} value={type}>{type}</option>)}
                     </select>
+                    <select
+                        value={sortOption}
+                        onChange={e => setSortOption(e.target.value)}
+                        className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary w-full lg:w-auto"
+                    >
+                        <option value="name-asc">Sort: Name (A-Z)</option>
+                        <option value="name-desc">Sort: Name (Z-A)</option>
+                        <option value="manufacturer-asc">Sort: Manufacturer (A-Z)</option>
+                        <option value="manufacturer-desc">Sort: Manufacturer (Z-A)</option>
+                        <option value="stock-desc">Sort: Stock (High-Low)</option>
+                        <option value="stock-asc">Sort: Stock (Low-High)</option>
+                    </select>
                 </div>
             </div>
 
@@ -177,11 +223,12 @@ const PaintsPage: React.FC = () => {
                                 <th className="p-4 hidden sm:table-cell">Manufacturer</th>
                                 <th className="p-4 hidden md:table-cell">Type</th>
                                 <th className="p-4 hidden lg:table-cell">Color Scheme</th>
+                                <th className="p-4">Stock</th>
                                 <th className="p-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredPaints.map(paint => (
+                            {sortedAndFilteredPaints.map(paint => (
                                 <tr key={paint.id} className="border-b border-border last:border-b-0 hover:bg-background">
                                     <td className="p-4">
                                         <div className="w-8 h-8 rounded-full border-2 border-background" style={{ backgroundColor: paint.rgbCode || '#888' }} title={paint.rgbCode}></div>
@@ -190,6 +237,7 @@ const PaintsPage: React.FC = () => {
                                     <td className="p-4 hidden sm:table-cell">{paint.manufacturer}</td>
                                     <td className="p-4 hidden md:table-cell">{paint.paintType}</td>
                                     <td className="p-4 hidden lg:table-cell">{paint.colorScheme}</td>
+                                    <td className="p-4 font-semibold">{paint.stock}</td>
                                     <td className="p-4">
                                         <div className="flex justify-end gap-2">
                                             <button onClick={() => setEditingPaint(paint)} className="text-blue-400 hover:text-blue-300"><PencilIcon /></button>
@@ -201,7 +249,7 @@ const PaintsPage: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-                {filteredPaints.length === 0 && (
+                {sortedAndFilteredPaints.length === 0 && (
                     <div className="text-center py-8 text-text-secondary">
                         <p>No paints match your search criteria.</p>
                     </div>
