@@ -21,6 +21,9 @@ const statusConfig: { [key in Model['status']]: { color: string; order: number; 
     'Purchased': { color: 'bg-gray-500', order: 7, textColor: 'text-white' },
 };
 
+// Define which statuses are considered "ready" for progress calculations.
+const readyStatuses: Model['status'][] = ['Ready to Game', 'Based', 'Painted'];
+
 
 const DashboardPage: React.FC = () => {
     // Fetch all necessary data from the global context.
@@ -89,7 +92,7 @@ const DashboardPage: React.FC = () => {
 
             if (totalModels === 0) return null;
             
-            const readyModels = systemModelsInFilter.filter(model => model.status === 'Ready to Game').length;
+            const readyModels = systemModelsInFilter.filter(model => readyStatuses.includes(model.status)).length;
             const percentage = (readyModels / totalModels) * 100;
 
             return { name: system.name, totalModels, readyModels, percentage };
@@ -111,7 +114,7 @@ const DashboardPage: React.FC = () => {
 
             if (totalModels === 0) return null;
 
-            const readyModels = armyModelsInFilter.filter(model => model.status === 'Ready to Game').length;
+            const readyModels = armyModelsInFilter.filter(model => readyStatuses.includes(model.status)).length;
             const percentage = (readyModels / totalModels) * 100;
             const gameSystemName = gameSystems.find(gs => gs.id === army.gameSystemId)?.name || 'Unknown';
             return { name: army.name, gameSystemName, totalModels, readyModels, percentage };
