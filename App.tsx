@@ -13,6 +13,7 @@ import CollectionPage from './pages/CollectionPage';
 import DashboardPage from './pages/DashboardPage';
 import BulkDataPage from './pages/BulkDataPage';
 import SettingsPage from './pages/SettingsPage';
+import CalendarPage from './pages/CalendarPage'; // Import the new CalendarPage
 import { DataProvider } from './context/DataContext';
 import ToastContainer from './components/ToastContainer';
 
@@ -38,6 +39,7 @@ const App: React.FC = () => {
               <Route path="/" element={<WelcomePage />} />
               <Route path="/collection" element={<CollectionPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/calendar" element={<CalendarPage />} /> {/* Add the new calendar route */}
               <Route path="/bulk" element={<BulkDataPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>

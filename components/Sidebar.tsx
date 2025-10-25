@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { HomeIcon, CollectionIcon, UploadIcon, CogIcon, MenuIcon, XIcon, DashboardIcon } from './icons/Icons';
+import { HomeIcon, CollectionIcon, UploadIcon, CogIcon, MenuIcon, XIcon, DashboardIcon, CalendarIcon } from './icons/Icons';
 
 const Sidebar: React.FC = () => {
   // State to manage the visibility of the mobile menu. `isOpen` is a boolean that
@@ -20,6 +20,7 @@ const Sidebar: React.FC = () => {
     { to: '/', text: 'Welcome', icon: <HomeIcon /> },
     { to: '/collection', text: 'Collection', icon: <CollectionIcon /> },
     { to: '/dashboard', text: 'Dashboard', icon: <DashboardIcon /> },
+    { to: '/calendar', text: 'Calendar', icon: <CalendarIcon /> },
     { to: '/bulk', text: 'Bulk Data', icon: <UploadIcon /> },
     { to: '/settings', text: 'Settings', icon: <CogIcon /> },
   ];

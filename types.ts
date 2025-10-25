@@ -47,6 +47,7 @@ export interface PaintingSession {
   end: string;   // ISO 8601 date string for the end time.
   notes?: string; // Optional notes or details.
   modelIds: string[]; // An array of Model IDs linked to this session.
+  gameSystemId?: string; // Optional foreign key linking to a GameSystem.
 }
 
 // Represents a temporary notification message (a "toast") shown to the user.

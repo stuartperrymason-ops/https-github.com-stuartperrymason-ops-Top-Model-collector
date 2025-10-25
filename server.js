@@ -395,12 +395,13 @@ app.get('/api/painting-sessions', async (req, res) => {
     const sessions = await paintingSessionsCollection.find({}).sort({ start: 1 }).toArray();
     res.json(sessions.map(doc => ({
         ...fromMongo(doc),
-        modelIds: (doc.modelIds || []).map(id => id.toHexString())
+        modelIds: (doc.modelIds || []).map(id => id.toHexString()),
+        gameSystemId: doc.gameSystemId ? doc.gameSystemId.toHexString() : undefined
     })));
 });
 
 app.post('/api/painting-sessions', async (req, res) => {
-    const { title, start, end, notes, modelIds } = req.body;
+    const { title, start, end, notes, modelIds, gameSystemId } = req.body;
     const newSessionData = {
         title,
         start,
@@ -408,11 +409,15 @@ app.post('/api/painting-sessions', async (req, res) => {
         notes,
         modelIds: (modelIds || []).map(id => toMongoId(id)),
     };
+    if (gameSystemId && ObjectId.isValid(gameSystemId)) {
+        newSessionData.gameSystemId = toMongoId(gameSystemId);
+    }
     const result = await paintingSessionsCollection.insertOne(newSessionData);
     const newDoc = await paintingSessionsCollection.findOne({ _id: result.insertedId });
     res.status(201).json({
         ...fromMongo(newDoc),
-        modelIds: (newDoc.modelIds || []).map(id => id.toHexString())
+        modelIds: (newDoc.modelIds || []).map(id => id.toHexString()),
+        gameSystemId: newDoc.gameSystemId ? newDoc.gameSystemId.toHexString() : undefined
     });
 });
 
@@ -421,6 +426,14 @@ app.put('/api/painting-sessions/:id', async (req, res) => {
     const sessionUpdates = req.body;
     if (sessionUpdates.modelIds) {
         sessionUpdates.modelIds = sessionUpdates.modelIds.map(id => toMongoId(id));
+    }
+    // Handle gameSystemId: convert if it's a valid ID string, otherwise set to null to clear it.
+    if (sessionUpdates.hasOwnProperty('gameSystemId')) {
+        if (sessionUpdates.gameSystemId && ObjectId.isValid(sessionUpdates.gameSystemId)) {
+            sessionUpdates.gameSystemId = toMongoId(sessionUpdates.gameSystemId);
+        } else {
+            sessionUpdates.gameSystemId = null;
+        }
     }
     delete sessionUpdates.id;
 
@@ -436,7 +449,8 @@ app.put('/api/painting-sessions/:id', async (req, res) => {
 
     res.json({
         ...fromMongo(result),
-        modelIds: (result.modelIds || []).map(id => id.toHexString())
+        modelIds: (result.modelIds || []).map(id => id.toHexString()),
+        gameSystemId: result.gameSystemId ? result.gameSystemId.toHexString() : undefined
     });
 });
 
