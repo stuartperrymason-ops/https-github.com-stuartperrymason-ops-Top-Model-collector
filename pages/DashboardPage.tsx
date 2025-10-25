@@ -77,30 +77,28 @@ const DashboardPage: React.FC = () => {
     }, [filteredModels]);
     
     // Memoize the calculation of "Ready to Game" progress for each game system.
+    // All calculations are based on the currently filtered models for a fully reactive dashboard.
     const gameSystemProgress = useMemo(() => {
-        // Determine which systems to display based on the filter.
         const systemsToDisplay = gameSystemFilter
             ? gameSystems.filter(gs => gs.id === gameSystemFilter)
             : gameSystems;
 
         return systemsToDisplay.map(system => {
-            // The total number of models for a system is constant, regardless of other filters.
-            const allSystemModels = models.filter(model => model.gameSystemId === system.id);
-            const totalModels = allSystemModels.length;
+            const systemModelsInFilter = filteredModels.filter(model => model.gameSystemId === system.id);
+            const totalModels = systemModelsInFilter.length;
 
             if (totalModels === 0) return null;
             
-            // The "ready" models are calculated from the currently filtered list.
-            const readyModels = filteredModels.filter(model => model.gameSystemId === system.id && model.status === 'Ready to Game').length;
-            
-            const percentage = totalModels > 0 ? (readyModels / totalModels) * 100 : 0;
+            const readyModels = systemModelsInFilter.filter(model => model.status === 'Ready to Game').length;
+            const percentage = (readyModels / totalModels) * 100;
+
             return { name: system.name, totalModels, readyModels, percentage };
-        }).filter((p): p is NonNullable<typeof p> => p !== null); // Remove null entries and assert type.
-    }, [models, filteredModels, gameSystems, gameSystemFilter]);
+        }).filter((p): p is NonNullable<typeof p> => p !== null);
+    }, [filteredModels, gameSystems, gameSystemFilter]);
 
     // Memoize the calculation of "Ready to Game" progress for each army.
+    // All calculations are based on the currently filtered models for a fully reactive dashboard.
     const armyProgress = useMemo(() => {
-        // Determine which armies to display based on the filters.
         const armiesToDisplay = armyFilter
             ? armies.filter(a => a.id === armyFilter)
             : gameSystemFilter
@@ -108,20 +106,17 @@ const DashboardPage: React.FC = () => {
             : armies;
 
         return armiesToDisplay.map(army => {
-            // The total number of models for an army is constant.
-            const allArmyModels = models.filter(model => model.armyIds.includes(army.id));
-            const totalModels = allArmyModels.length;
+            const armyModelsInFilter = filteredModels.filter(model => model.armyIds.includes(army.id));
+            const totalModels = armyModelsInFilter.length;
 
             if (totalModels === 0) return null;
 
-            // The "ready" models are calculated from the currently filtered list.
-            const readyModels = filteredModels.filter(model => model.armyIds.includes(army.id) && model.status === 'Ready to Game').length;
-            
-            const percentage = totalModels > 0 ? (readyModels / totalModels) * 100 : 0;
+            const readyModels = armyModelsInFilter.filter(model => model.status === 'Ready to Game').length;
+            const percentage = (readyModels / totalModels) * 100;
             const gameSystemName = gameSystems.find(gs => gs.id === army.gameSystemId)?.name || 'Unknown';
             return { name: army.name, gameSystemName, totalModels, readyModels, percentage };
         }).filter((p): p is NonNullable<typeof p> => p !== null);
-    }, [models, filteredModels, armies, gameSystems, armyFilter, gameSystemFilter]);
+    }, [filteredModels, armies, gameSystems, armyFilter, gameSystemFilter]);
 
     // Show a loading message while data is being fetched.
     if (loading) {

@@ -43,16 +43,15 @@ const CollectionPage: React.FC = () => {
   useEffect(() => {
     const mainElement = document.querySelector('main');
     if (!mainElement) return;
-    
-    // Store the original inline style, which is likely empty.
-    const originalBgColor = mainElement.style.backgroundColor;
+
     const root = document.documentElement;
 
     // A helper function to reset all theme-related styles to their defaults.
     const resetToDefault = () => {
         root.style.removeProperty('--theme-primary-color');
         root.style.removeProperty('--theme-secondary-color');
-        mainElement.style.backgroundColor = originalBgColor;
+        mainElement.style.removeProperty('background-color');
+        mainElement.classList.remove('transition-colors', 'duration-500');
     };
 
     if (gameSystemFilter) {
