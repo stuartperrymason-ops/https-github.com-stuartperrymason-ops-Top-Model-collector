@@ -168,18 +168,22 @@ app.get('/api/game-systems', async (req, res) => {
 });
 
 app.post('/api/game-systems', async (req, res) => {
-    const { name } = req.body;
-    const result = await gameSystemsCollection.insertOne({ name });
-    const newSystem = { id: result.insertedId.toHexString(), name };
-    res.status(201).json(newSystem); // 201 Created status
+    const { name, colorScheme } = req.body;
+    const result = await gameSystemsCollection.insertOne({ name, colorScheme });
+    const newSystem = await gameSystemsCollection.findOne({ _id: result.insertedId });
+    res.status(201).json(fromMongo(newSystem));
 });
 
 app.put('/api/game-systems/:id', async (req, res) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, colorScheme } = req.body;
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (colorScheme !== undefined) updateData.colorScheme = colorScheme;
+    
     const result = await gameSystemsCollection.findOneAndUpdate(
         { _id: toMongoId(id) }, 
-        { $set: { name } },
+        { $set: updateData },
         { returnDocument: 'after' } // Return the updated document.
     );
     res.json(fromMongo(result));
@@ -194,10 +198,19 @@ app.delete('/api/game-systems/:id', async (req, res) => {
     const armiesToDelete = await armiesCollection.find({ gameSystemId: systemId }).toArray();
     const armyIdsToDelete = armiesToDelete.map(a => a._id);
 
-    // 2. Delete models associated with those armies.
+    // 2. Delete models associated with those armies OR whose primary gameSystemId matches.
     if (armyIdsToDelete.length > 0) {
-        await modelsCollection.deleteMany({ armyIds: { $in: armyIdsToDelete } });
+        await modelsCollection.deleteMany({
+             $or: [
+                { armyIds: { $in: armyIdsToDelete } },
+                { gameSystemId: systemId }
+             ]
+        });
+    } else {
+        // if no armies, still delete models associated with the game system
+        await modelsCollection.deleteMany({ gameSystemId: systemId });
     }
+
     // 3. Delete the armies themselves.
     await armiesCollection.deleteMany({ gameSystemId: systemId });
     // 4. Finally, delete the game system.

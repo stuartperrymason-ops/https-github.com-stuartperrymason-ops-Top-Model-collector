@@ -7,7 +7,75 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { GameSystem, Army } from '../types';
-import { PlusIcon, PencilIcon, TrashIcon } from '../components/icons/Icons';
+import { PlusIcon, PencilIcon, TrashIcon, XIcon } from '../components/icons/Icons';
+
+// A local modal component for editing a Game System.
+// This keeps the logic self-contained within the SettingsPage.
+const GameSystemEditModal: React.FC<{
+    system: GameSystem;
+    onClose: () => void;
+    onSave: (id: string, updates: Partial<Omit<GameSystem, 'id'>>) => void;
+}> = ({ system, onClose, onSave }) => {
+    const [name, setName] = useState(system.name);
+    const [colorScheme, setColorScheme] = useState(system.colorScheme || {
+        primary: '#4f46e5',
+        secondary: '#10b981',
+        background: '#111827',
+    });
+
+    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setColorScheme(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleSave = () => {
+        onSave(system.id, { name, colorScheme });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+            <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-md border border-border">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-white">Edit Game System</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white"><XIcon /></button>
+                </div>
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="edit-system-name" className="block text-sm font-medium text-text-secondary mb-1">System Name</label>
+                        <input
+                            id="edit-system-name"
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                    </div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Color Scheme</label>
+                    <div className="grid grid-cols-3 gap-4">
+                         {Object.entries(colorScheme).map(([key, value]) => (
+                            <div key={key}>
+                                <label htmlFor={`color-${key}`} className="block text-xs font-medium text-text-secondary capitalize">{key}</label>
+                                <input
+                                    id={`color-${key}`}
+                                    type="color"
+                                    name={key}
+                                    value={value}
+                                    onChange={handleColorChange}
+                                    className="w-full h-10 p-1 bg-background border border-border rounded-md cursor-pointer"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex justify-end gap-4 mt-6">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700">Cancel</button>
+                    <button onClick={handleSave} className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const SettingsPage: React.FC = () => {
     // Destructure all necessary data and functions from the global DataContext.
@@ -19,27 +87,32 @@ const SettingsPage: React.FC = () => {
 
     // State for managing the "Add Game System" form input.
     const [newSystemName, setNewSystemName] = useState('');
+    const [newSystemColorScheme, setNewSystemColorScheme] = useState({
+        primary: '#4f46e5',
+        secondary: '#10b981',
+        background: '#1f2937',
+    });
     // State for managing the "Add Army" form inputs.
     const [newArmyName, setNewArmyName] = useState('');
     const [newArmySystemId, setNewArmySystemId] = useState('');
+
+    // State for the edit modal
+    const [editingSystem, setEditingSystem] = useState<GameSystem | null>(null);
 
     // --- Event Handlers for Game Systems ---
 
     const handleAddSystem = (e: React.FormEvent) => {
         e.preventDefault(); // Prevent the form from causing a page reload.
         if (newSystemName.trim()) {
-            addGameSystem(newSystemName.trim());
+            addGameSystem(newSystemName.trim(), newSystemColorScheme);
             setNewSystemName(''); // Clear the input field after submission.
+            // Reset colors to default for the next entry
+            setNewSystemColorScheme({ primary: '#4f46e5', secondary: '#10b981', background: '#1f2937' });
         }
     };
     
-    const handleUpdateSystem = (system: GameSystem) => {
-        // Use the browser's `prompt` for a simple inline edit UI.
-        const newName = prompt('Enter new name for the game system:', system.name);
-        // Only call the update function if the user provided a new, different name.
-        if (newName && newName.trim() !== system.name) {
-            updateGameSystem(system.id, newName.trim());
-        }
+    const handleUpdateSystem = (id: string, updates: Partial<Omit<GameSystem, 'id'>>) => {
+        updateGameSystem(id, updates);
     };
     
     const handleDeleteSystem = (system: GameSystem) => {
@@ -84,23 +157,45 @@ const SettingsPage: React.FC = () => {
                 {/* Game Systems Management Card */}
                 <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                     <h2 className="text-2xl font-semibold text-white mb-4">Game Systems</h2>
-                    <form onSubmit={handleAddSystem} className="flex gap-2 mb-4">
+                    <form onSubmit={handleAddSystem} className="space-y-3 mb-4">
                         <input
                             type="text"
                             value={newSystemName}
                             onChange={(e) => setNewSystemName(e.target.value)}
                             placeholder="New game system name"
-                            className="flex-grow bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                         />
-                        <button type="submit" className="p-2 bg-primary text-white rounded-md hover:bg-indigo-500 transition-colors"><PlusIcon /></button>
+                        <div className="grid grid-cols-3 gap-2 items-center">
+                            {Object.entries(newSystemColorScheme).map(([key, value]) => (
+                                <div key={key}>
+                                    <label className="text-xs text-text-secondary capitalize">{key}</label>
+                                    <input
+                                        type="color"
+                                        value={value}
+                                        onChange={(e) => setNewSystemColorScheme(prev => ({...prev, [key]: e.target.value}))}
+                                        className="w-full h-10 p-1 bg-background border border-border rounded-md cursor-pointer"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <button type="submit" className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:opacity-80 transition-opacity">
+                            <PlusIcon /> Add System
+                        </button>
                     </form>
                     {/* List of existing game systems */}
                     <ul className="space-y-2 max-h-64 overflow-y-auto">
                         {gameSystems.map(system => (
                             <li key={system.id} className="flex justify-between items-center bg-background p-2 rounded-md">
-                                <span>{system.name}</span>
+                                <div className="flex items-center">
+                                    <span 
+                                        className="w-5 h-5 rounded-full mr-3 border border-border" 
+                                        style={{ backgroundColor: system.colorScheme?.primary || '#4f46e5' }}
+                                        title={`Primary: ${system.colorScheme?.primary}\nSecondary: ${system.colorScheme?.secondary}\nBackground: ${system.colorScheme?.background}`}
+                                    ></span>
+                                    <span>{system.name}</span>
+                                </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleUpdateSystem(system)} className="text-blue-400 hover:text-blue-300"><PencilIcon /></button>
+                                    <button onClick={() => setEditingSystem(system)} className="text-blue-400 hover:text-blue-300"><PencilIcon /></button>
                                     <button onClick={() => handleDeleteSystem(system)} className="text-red-400 hover:text-red-300"><TrashIcon /></button>
                                 </div>
                             </li>
@@ -149,6 +244,13 @@ const SettingsPage: React.FC = () => {
                     </ul>
                 </div>
             </div>
+            {editingSystem && (
+                <GameSystemEditModal 
+                    system={editingSystem}
+                    onClose={() => setEditingSystem(null)}
+                    onSave={handleUpdateSystem}
+                />
+            )}
         </div>
     );
 };

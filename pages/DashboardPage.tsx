@@ -5,7 +5,7 @@
  * This program was written by Stuart Mason October 2025.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Model } from '../types';
 
@@ -25,15 +25,41 @@ const statusConfig: { [key in Model['status']]: { color: string; order: number; 
 const DashboardPage: React.FC = () => {
     // Fetch all necessary data from the global context.
     const { models, gameSystems, armies, loading, error } = useData();
+    
+    // State for filter controls.
+    const [gameSystemFilter, setGameSystemFilter] = useState<string>('');
+    const [armyFilter, setArmyFilter] = useState<string>('');
+
+    // Memoized calculation for armies available in the dropdown, based on the selected game system.
+    const availableArmies = useMemo(() => {
+        if (!gameSystemFilter) return armies;
+        return armies.filter(army => army.gameSystemId === gameSystemFilter);
+    }, [armies, gameSystemFilter]);
+
+    // This effect ensures that if a game system is selected that doesn't contain the currently
+    // selected army, the army filter is reset. This prevents an inconsistent UI state.
+    useEffect(() => {
+        if (armyFilter && !availableArmies.some(a => a.id === armyFilter)) {
+            setArmyFilter('');
+        }
+    }, [availableArmies, armyFilter]);
+
+    // Memoized filtering logic for models.
+    const filteredModels = useMemo(() => {
+        return models
+            .filter(model => !gameSystemFilter || model.gameSystemId === gameSystemFilter)
+            .filter(model => !armyFilter || model.armyIds.includes(armyFilter));
+    }, [models, gameSystemFilter, armyFilter]);
+
 
     // Memoize the calculation of the overall status breakdown. `useMemo` is crucial here for performance,
     // as it prevents this potentially expensive calculation from re-running on every render,
-    // only recalculating when the `models` array changes.
+    // only recalculating when the `filteredModels` array changes.
     const statusBreakdown = useMemo(() => {
-        if (models.length === 0) return [];
+        if (filteredModels.length === 0) return [];
         
         // Step 1: Count the number of models for each status using `reduce`.
-        const counts = models.reduce((acc, model) => {
+        const counts = filteredModels.reduce((acc, model) => {
             acc[model.status] = (acc[model.status] || 0) + 1;
             return acc;
         }, {} as { [key in Model['status']]: number });
@@ -43,32 +69,40 @@ const DashboardPage: React.FC = () => {
             .map(([status, count]) => ({
                 status: status as Model['status'],
                 count,
-                percentage: (count / models.length) * 100,
+                percentage: (count / filteredModels.length) * 100,
                 ...statusConfig[status as Model['status']], // Merge in color and order from the config.
             }))
             .sort((a, b) => a.order - b.order); // Sort based on the defined order for a consistent display.
 
-    }, [models]);
+    }, [filteredModels]);
     
-    // Memoize the calculation of "Ready to Game" progress for each game system.
+    // Memoize the calculation of "Ready to Game" progress for each game system, respecting filters.
     const gameSystemProgress = useMemo(() => {
-        return gameSystems.map(system => {
-            // Filter models belonging to the current system.
-            const systemModels = models.filter(model => model.gameSystemId === system.id);
+        const systemsToDisplay = gameSystemFilter
+            ? gameSystems.filter(gs => gs.id === gameSystemFilter)
+            : gameSystems;
+
+        return systemsToDisplay.map(system => {
+            const systemModels = filteredModels.filter(model => model.gameSystemId === system.id);
             const totalModels = systemModels.length;
-            if (totalModels === 0) return null; // Skip systems with no models.
+            if (totalModels === 0) return null; // Skip systems with no models in the current filter.
             
-            // Calculate how many models are "Ready to Game".
             const readyModels = systemModels.filter(model => model.status === 'Ready to Game').length;
             const percentage = (readyModels / totalModels) * 100;
             return { name: system.name, totalModels, readyModels, percentage };
         }).filter(Boolean); // `filter(Boolean)` is a concise way to remove null entries.
-    }, [models, gameSystems]);
+    }, [filteredModels, gameSystems, gameSystemFilter]);
 
-    // Memoize the calculation of "Ready to Game" progress for each army.
+    // Memoize the calculation of "Ready to Game" progress for each army, respecting filters.
     const armyProgress = useMemo(() => {
-        return armies.map(army => {
-            const armyModels = models.filter(model => model.armyIds.includes(army.id));
+        const armiesToDisplay = armyFilter
+            ? armies.filter(a => a.id === armyFilter)
+            : gameSystemFilter
+            ? armies.filter(a => a.gameSystemId === gameSystemFilter)
+            : armies;
+
+        return armiesToDisplay.map(army => {
+            const armyModels = filteredModels.filter(model => model.armyIds.includes(army.id));
             const totalModels = armyModels.length;
             if (totalModels === 0) return null;
 
@@ -77,7 +111,7 @@ const DashboardPage: React.FC = () => {
             const gameSystemName = gameSystems.find(gs => gs.id === army.gameSystemId)?.name || 'Unknown';
             return { name: army.name, gameSystemName, totalModels, readyModels, percentage };
         }).filter(Boolean);
-    }, [models, armies, gameSystems]);
+    }, [filteredModels, armies, gameSystems, armyFilter, gameSystemFilter]);
 
     // Show a loading message while data is being fetched.
     if (loading) {
@@ -89,18 +123,51 @@ const DashboardPage: React.FC = () => {
         return <div className="flex justify-center items-center h-full"><p className="text-red-500">{error}</p></div>;
     }
 
+    const handleResetFilters = () => {
+        setGameSystemFilter('');
+        setArmyFilter('');
+    }
+
     return (
         <div className="container mx-auto">
             <h1 className="text-3xl font-bold text-white mb-6">Collection Dashboard</h1>
             
+            {/* Filter controls section */}
+            <div className="mb-6 p-4 bg-surface rounded-lg shadow-md flex flex-col sm:flex-row gap-4">
+                <select
+                    value={gameSystemFilter}
+                    onChange={e => setGameSystemFilter(e.target.value)}
+                    className="flex-grow bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                    <option value="">All Game Systems</option>
+                    {gameSystems.map(gs => <option key={gs.id} value={gs.id}>{gs.name}</option>)}
+                </select>
+                <select
+                    value={armyFilter}
+                    onChange={e => setArmyFilter(e.target.value)}
+                    className="flex-grow bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                    disabled={availableArmies.length === 0}
+                >
+                    <option value="">All Armies</option>
+                    {availableArmies.map(army => <option key={army.id} value={army.id}>{army.name}</option>)}
+                </select>
+                <button
+                    onClick={handleResetFilters}
+                    className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                    Reset
+                </button>
+            </div>
+
+
             {/* Conditionally render the dashboard content only if there are models to display. */}
-            {models.length > 0 ? (
+            {filteredModels.length > 0 ? (
                 <>
                  {/* Overall Progress Card */}
                  <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold text-white">Overall Painting Progress</h2>
-                        <span className="text-2xl font-bold text-primary">{models.length} Total Models</span>
+                        <span className="text-2xl font-bold text-primary">{filteredModels.length} Total Models</span>
                     </div>
 
                     {/* The main status bar is a flex container. Each status is a div whose width
@@ -111,7 +178,7 @@ const DashboardPage: React.FC = () => {
                                 key={status}
                                 className={`h-full transition-all duration-500 ease-out ${color}`}
                                 style={{ width: `${percentage}%` }}
-                                title={`${status}: ${models.filter(m => m.status === status).length} models (${percentage.toFixed(1)}%)`}
+                                title={`${status}: ${filteredModels.filter(m => m.status === status).length} models (${percentage.toFixed(1)}%)`}
                             />
                         ))}
                     </div>
@@ -136,7 +203,7 @@ const DashboardPage: React.FC = () => {
                     <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                         <h2 className="text-xl font-semibold text-white mb-4">Progress by Game System</h2>
                         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                            {gameSystemProgress.map(progress => (
+                            {gameSystemProgress.length > 0 ? gameSystemProgress.map(progress => (
                                 <div key={progress.name}>
                                     <div className="flex justify-between items-baseline mb-1">
                                         <span className="font-bold text-text-primary">{progress.name}</span>
@@ -146,14 +213,14 @@ const DashboardPage: React.FC = () => {
                                         <div className="bg-primary h-4 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
                                     </div>
                                 </div>
-                            ))}
+                            )) : <p className="text-text-secondary">No systems with models match the current filter.</p>}
                         </div>
                     </div>
                     {/* Progress by Army Card */}
                     <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                         <h2 className="text-xl font-semibold text-white mb-4">Progress by Army</h2>
                          <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                            {armyProgress.map(progress => (
+                             {armyProgress.length > 0 ? armyProgress.map(progress => (
                                 <div key={`${progress.gameSystemName}-${progress.name}`}>
                                     <div className="flex justify-between items-baseline mb-1">
                                         <div>
@@ -166,16 +233,26 @@ const DashboardPage: React.FC = () => {
                                         <div className="bg-primary h-4 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
                                     </div>
                                 </div>
-                            ))}
+                            )) : <p className="text-text-secondary">No armies with models match the current filter.</p>}
                         </div>
                     </div>
                 </div>
                 </>
             ) : (
-                // Display a message if there are no models in the collection.
+                // Display a message if there are no models in the collection or matching the filter.
                 <div className="text-center py-16 bg-surface rounded-lg">
-                    <p className="text-xl text-text-secondary">No models in your collection yet.</p>
-                    <p className="text-text-secondary">Add some models to see your dashboard!</p>
+                    <p className="text-xl text-text-secondary">
+                        {models.length === 0 
+                            ? "No models in your collection yet."
+                            : "No models match the current filters."
+                        }
+                    </p>
+                    <p className="text-text-secondary">
+                        {models.length === 0
+                            ? "Add some models to see your dashboard!"
+                            : "Try adjusting your filters."
+                        }
+                    </p>
                 </div>
             )}
         </div>

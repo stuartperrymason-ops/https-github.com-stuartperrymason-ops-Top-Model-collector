@@ -23,8 +23,8 @@ interface DataContextState {
   // Functions to interact with the state
   addToast: (message: string, type: 'success' | 'error') => void;
   // Game System functions
-  addGameSystem: (name: string) => Promise<GameSystem | undefined>;
-  updateGameSystem: (id: string, name: string) => Promise<void>;
+  addGameSystem: (name: string, colorScheme: GameSystem['colorScheme']) => Promise<GameSystem | undefined>;
+  updateGameSystem: (id: string, updates: Partial<Omit<GameSystem, 'id'>>) => Promise<void>;
   deleteGameSystem: (id: string) => Promise<void>;
   // Army functions
   addArmy: (name: string, gameSystemId: string) => Promise<Army | undefined>;
@@ -110,9 +110,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // 2. On success, update the local state to reflect the change immediately.
   // 3. Show a success or error toast to the user.
   // 4. Handle any errors gracefully.
-  const addGameSystem = async (name: string): Promise<GameSystem | undefined> => {
+  const addGameSystem = async (name: string, colorScheme: GameSystem['colorScheme']): Promise<GameSystem | undefined> => {
     try {
-      const newSystem = await apiService.addGameSystem({ name });
+      const newSystem = await apiService.addGameSystem({ name, colorScheme });
       setGameSystems(prev => [...prev, newSystem]); // Optimistic update
       addToast('Game system added successfully!', 'success');
       return newSystem;
@@ -123,9 +123,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
   
-  const updateGameSystem = async (id: string, name: string) => {
+  const updateGameSystem = async (id: string, updates: Partial<Omit<GameSystem, 'id'>>) => {
     try {
-      const updatedSystem = await apiService.updateGameSystem(id, { name });
+      const updatedSystem = await apiService.updateGameSystem(id, updates);
       setGameSystems(prev => prev.map(s => (s.id === id ? updatedSystem : s)));
       addToast('Game system updated successfully!', 'success');
     } catch (err) {

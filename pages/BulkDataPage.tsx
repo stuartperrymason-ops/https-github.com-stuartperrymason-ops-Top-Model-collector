@@ -207,7 +207,8 @@ const BulkDataPage: React.FC = () => {
         try {
             // Step 1: Create any new game systems. `addGameSystem` returns the created object.
             const createdSystems = (await Promise.all(
-                systemsToCreate.map(name => addGameSystem(name))
+// FIX: The addGameSystem function requires a colorScheme argument. A default is provided here.
+                systemsToCreate.map(name => addGameSystem(name, { primary: '#4f46e5', secondary: '#10b981', background: '#1f2937' }))
             )).filter((s): s is GameSystem => s !== undefined);
             
             // Combine existing and newly created systems for the next step.
