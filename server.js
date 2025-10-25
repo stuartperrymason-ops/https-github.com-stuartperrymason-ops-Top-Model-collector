@@ -168,25 +168,68 @@ app.get('/api/game-systems', async (req, res) => {
 });
 
 app.post('/api/game-systems', async (req, res) => {
-    const { name, colorScheme } = req.body;
-    const result = await gameSystemsCollection.insertOne({ name, colorScheme });
-    const newSystem = await gameSystemsCollection.findOne({ _id: result.insertedId });
-    res.status(201).json(fromMongo(newSystem));
+    try {
+        const { name, colorScheme } = req.body;
+        // Basic validation
+        if (!name || typeof name !== 'string' || name.trim() === '') {
+            return res.status(400).json({ message: 'Game system name is required and must be a non-empty string.' });
+        }
+        if (colorScheme && (typeof colorScheme !== 'object' || !colorScheme.primary || !colorScheme.secondary || !colorScheme.background)) {
+             return res.status(400).json({ message: 'colorScheme must be an object with primary, secondary, and background properties.' });
+        }
+        
+        const result = await gameSystemsCollection.insertOne({ name: name.trim(), colorScheme });
+        const newSystem = await gameSystemsCollection.findOne({ _id: result.insertedId });
+        res.status(201).json(fromMongo(newSystem));
+    } catch (error) {
+        console.error('Error adding game system:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 app.put('/api/game-systems/:id', async (req, res) => {
-    const { id } = req.params;
-    const { name, colorScheme } = req.body;
-    const updateData = {};
-    if (name !== undefined) updateData.name = name;
-    if (colorScheme !== undefined) updateData.colorScheme = colorScheme;
-    
-    const result = await gameSystemsCollection.findOneAndUpdate(
-        { _id: toMongoId(id) }, 
-        { $set: updateData },
-        { returnDocument: 'after' } // Return the updated document.
-    );
-    res.json(fromMongo(result));
+    try {
+        const { id } = req.params;
+        const { name, colorScheme } = req.body;
+        const updateData = {};
+        
+        // Input validation
+        if (name !== undefined) {
+            if (typeof name !== 'string' || name.trim() === '') {
+                return res.status(400).json({ message: 'Name must be a non-empty string.' });
+            }
+            updateData.name = name.trim();
+        }
+
+        if (colorScheme !== undefined) {
+            if (typeof colorScheme !== 'object' || colorScheme === null || !colorScheme.primary || !colorScheme.secondary || !colorScheme.background) {
+                return res.status(400).json({ message: 'colorScheme must be an object with primary, secondary, and background properties.' });
+            }
+            updateData.colorScheme = colorScheme;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: 'No update data provided.' });
+        }
+        
+        const result = await gameSystemsCollection.findOneAndUpdate(
+            { _id: toMongoId(id) }, 
+            { $set: updateData },
+            { returnDocument: 'after' }
+        );
+
+        if (!result) {
+            return res.status(404).json({ message: 'Game system not found.' });
+        }
+        
+        res.json(fromMongo(result));
+    } catch (error) {
+        if (error.name === 'BSONError') {
+             return res.status(400).json({ message: 'Invalid ID format.' });
+        }
+        console.error('Error updating game system:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 app.delete('/api/game-systems/:id', async (req, res) => {

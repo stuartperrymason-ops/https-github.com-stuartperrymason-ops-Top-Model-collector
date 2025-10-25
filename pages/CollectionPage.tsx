@@ -278,9 +278,21 @@ const CollectionPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <p className="text-xl text-text-secondary">Your collection is empty.</p>
-          <p className="text-text-secondary">Click "Add Model" to get started!</p>
+        <div className="text-center py-16 bg-surface rounded-lg border border-border">
+            <div className="flex justify-center mb-4">
+                <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            </div>
+          {models.length === 0 ? (
+            <>
+              <h3 className="text-xl font-semibold text-text-primary">Your collection is empty.</h3>
+              <p className="text-text-secondary mt-2">Click the "Add Model" button to get started!</p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-xl font-semibold text-text-primary">No Models Found</h3>
+              <p className="text-text-secondary mt-2">Try adjusting your search or filter criteria.</p>
+            </>
+          )}
         </div>
       )}
 

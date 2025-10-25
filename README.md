@@ -10,9 +10,10 @@ Welcome to ModelForge, your digital armory for managing tabletop miniatures. Thi
 ## Key Features
 
 - **Detailed Collection View**: Browse your entire collection with images, descriptions, and current painting status.
-- **Progress Dashboard**: Visualize your hobby progress with charts breaking down the status of your models by army and game system.
+- **Progress Dashboard**: Visualize your hobby progress with filterable charts breaking down the status of your models by army and game system.
+- **Dynamic Theming**: Customize the look and feel of your collection by assigning unique color schemes to each game system.
 - **Bulk Data Management**: Easily import your existing collection from a CSV file.
-- **Customizable Settings**: Manage the game systems and armies that make up your collection.
+- **Customizable Settings**: Manage the game systems (including color themes) and armies that make up your collection.
 - **AI-Powered Descriptions**: Use the Gemini API to automatically generate rich, flavorful descriptions for your models.
 
 ---
@@ -79,7 +80,7 @@ sequenceDiagram
 
 ### 3. Bulk CSV Import Flow
 
-This flowchart illustrates the logic behind the CSV import feature, from file parsing and validation to the final import summary. The process includes a review step for the user to handle potential duplicates and errors.
+This flowchart illustrates the logic behind the CSV import feature. New game systems found in the file are created with a default color scheme. The process includes a review step for the user to handle potential duplicates and errors.
 
 ```mermaid
 graph TD
@@ -91,7 +92,7 @@ graph TD
     E -- Yes --> G[Show Review Modal];
     G --> H{User confirms choices & clicks "Confirm"};
     H --> F;
-    F --> I[1. Create new Game Systems in DB];
+    F --> I[1. Create new Game Systems in DB <br>(with default color scheme)];
     I --> J[2. Create new Armies in DB];
     J --> K[3. Prepare final model list <br>(resolve names to new IDs)];
     K --> L[4. Call `bulkAddModels` to save to DB];
@@ -100,4 +101,34 @@ graph TD
 
     style G fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
     style M fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
+```
+
+### 4. User Interaction: Editing a Game System
+
+This sequence diagram illustrates how a user edits a game system, including changing its custom color scheme. The changes are saved to the database and reflected immediately in the UI.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SettingsPage
+    participant GameSystemEditModal
+    participant DataContext
+    participant apiService
+    participant Server
+    participant Database
+
+    User->>SettingsPage: Clicks "Edit" on a Game System
+    SettingsPage->>GameSystemEditModal: Opens modal with system data
+    User->>GameSystemEditModal: Changes name and/or colors
+    User->>GameSystemEditModal: Clicks "Save Changes"
+    GameSystemEditModal->>DataContext: Calls updateGameSystem(id, updates)
+    DataContext->>apiService: Calls updateGameSystem(id, updates)
+    apiService->>Server: PUT /api/game-systems/:id with new data
+    Server->>Database: Updates the system document
+    Database-->>Server: Returns updated document
+    Server-->>apiService: Returns updated system JSON
+    apiService-->>DataContext: Returns updated system
+    DataContext->>DataContext: Updates `gameSystems` state
+    DataContext-->>SettingsPage: Re-renders with updated system list
+    GameSystemEditModal->>SettingsPage: Closes modal (onClose)
 ```

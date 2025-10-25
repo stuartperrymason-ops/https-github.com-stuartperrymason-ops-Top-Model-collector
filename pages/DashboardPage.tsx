@@ -76,25 +76,31 @@ const DashboardPage: React.FC = () => {
 
     }, [filteredModels]);
     
-    // Memoize the calculation of "Ready to Game" progress for each game system, respecting filters.
+    // Memoize the calculation of "Ready to Game" progress for each game system.
     const gameSystemProgress = useMemo(() => {
+        // Determine which systems to display based on the filter.
         const systemsToDisplay = gameSystemFilter
             ? gameSystems.filter(gs => gs.id === gameSystemFilter)
             : gameSystems;
 
         return systemsToDisplay.map(system => {
-            const systemModels = filteredModels.filter(model => model.gameSystemId === system.id);
-            const totalModels = systemModels.length;
-            if (totalModels === 0) return null; // Skip systems with no models in the current filter.
-            
-            const readyModels = systemModels.filter(model => model.status === 'Ready to Game').length;
-            const percentage = (readyModels / totalModels) * 100;
-            return { name: system.name, totalModels, readyModels, percentage };
-        }).filter(Boolean); // `filter(Boolean)` is a concise way to remove null entries.
-    }, [filteredModels, gameSystems, gameSystemFilter]);
+            // The total number of models for a system is constant, regardless of other filters.
+            const allSystemModels = models.filter(model => model.gameSystemId === system.id);
+            const totalModels = allSystemModels.length;
 
-    // Memoize the calculation of "Ready to Game" progress for each army, respecting filters.
+            if (totalModels === 0) return null;
+            
+            // The "ready" models are calculated from the currently filtered list.
+            const readyModels = filteredModels.filter(model => model.gameSystemId === system.id && model.status === 'Ready to Game').length;
+            
+            const percentage = totalModels > 0 ? (readyModels / totalModels) * 100 : 0;
+            return { name: system.name, totalModels, readyModels, percentage };
+        }).filter((p): p is NonNullable<typeof p> => p !== null); // Remove null entries and assert type.
+    }, [models, filteredModels, gameSystems, gameSystemFilter]);
+
+    // Memoize the calculation of "Ready to Game" progress for each army.
     const armyProgress = useMemo(() => {
+        // Determine which armies to display based on the filters.
         const armiesToDisplay = armyFilter
             ? armies.filter(a => a.id === armyFilter)
             : gameSystemFilter
@@ -102,16 +108,20 @@ const DashboardPage: React.FC = () => {
             : armies;
 
         return armiesToDisplay.map(army => {
-            const armyModels = filteredModels.filter(model => model.armyIds.includes(army.id));
-            const totalModels = armyModels.length;
+            // The total number of models for an army is constant.
+            const allArmyModels = models.filter(model => model.armyIds.includes(army.id));
+            const totalModels = allArmyModels.length;
+
             if (totalModels === 0) return null;
 
-            const readyModels = armyModels.filter(model => model.status === 'Ready to Game').length;
-            const percentage = (readyModels / totalModels) * 100;
+            // The "ready" models are calculated from the currently filtered list.
+            const readyModels = filteredModels.filter(model => model.armyIds.includes(army.id) && model.status === 'Ready to Game').length;
+            
+            const percentage = totalModels > 0 ? (readyModels / totalModels) * 100 : 0;
             const gameSystemName = gameSystems.find(gs => gs.id === army.gameSystemId)?.name || 'Unknown';
             return { name: army.name, gameSystemName, totalModels, readyModels, percentage };
-        }).filter(Boolean);
-    }, [filteredModels, armies, gameSystems, armyFilter, gameSystemFilter]);
+        }).filter((p): p is NonNullable<typeof p> => p !== null);
+    }, [models, filteredModels, armies, gameSystems, armyFilter, gameSystemFilter]);
 
     // Show a loading message while data is being fetched.
     if (loading) {
@@ -161,7 +171,7 @@ const DashboardPage: React.FC = () => {
 
 
             {/* Conditionally render the dashboard content only if there are models to display. */}
-            {filteredModels.length > 0 ? (
+            {models.length > 0 ? (
                 <>
                  {/* Overall Progress Card */}
                  <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
@@ -239,18 +249,20 @@ const DashboardPage: React.FC = () => {
                 </div>
                 </>
             ) : (
-                // Display a message if there are no models in the collection or matching the filter.
-                <div className="text-center py-16 bg-surface rounded-lg">
-                    <p className="text-xl text-text-secondary">
-                        {models.length === 0 
-                            ? "No models in your collection yet."
-                            : "No models match the current filters."
-                        }
-                    </p>
-                    <p className="text-text-secondary">
+                <div className="text-center py-16 bg-surface rounded-lg border border-border">
+                    <div className="flex justify-center mb-4">
+                        <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-text-primary">
                         {models.length === 0
-                            ? "Add some models to see your dashboard!"
-                            : "Try adjusting your filters."
+                            ? "Your Dashboard is Empty"
+                            : "No Data for Current Filters"
+                        }
+                    </h3>
+                    <p className="text-text-secondary mt-2">
+                        {models.length === 0
+                            ? "Add models to your collection to see your progress here."
+                            : "Try adjusting or resetting your filters to see your stats."
                         }
                     </p>
                 </div>
