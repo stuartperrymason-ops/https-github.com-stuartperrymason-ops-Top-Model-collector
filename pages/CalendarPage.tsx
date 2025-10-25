@@ -11,7 +11,7 @@ import { PaintingSession } from '../types';
 import PaintingSessionFormModal from '../components/PaintingSessionFormModal';
 
 const CalendarPage: React.FC = () => {
-    const { paintingSessions, gameSystems } = useData();
+    const { paintingSessions, gameSystems, deletePaintingSession } = useData();
     const [currentDate, setCurrentDate] = useState(new Date());
     
     // State for managing the form modal
@@ -70,7 +70,7 @@ const CalendarPage: React.FC = () => {
         setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
     };
 
-    // --- Modal Handlers ---
+    // --- Modal and Action Handlers ---
     const handleAddSession = (date: Date) => {
         setSelectedDate(date);
         setSelectedSession(null);
@@ -81,6 +81,12 @@ const CalendarPage: React.FC = () => {
         setSelectedSession(session);
         setSelectedDate(null);
         setIsModalOpen(true);
+    };
+
+    const handleDeleteSession = (session: PaintingSession) => {
+        if (window.confirm(`Are you sure you want to delete the session "${session.title}"?`)) {
+            deletePaintingSession(session.id);
+        }
     };
 
     const handleCloseModal = () => {
@@ -134,15 +140,26 @@ const CalendarPage: React.FC = () => {
                                         return (
                                             <div 
                                                 key={session.id}
-                                                onClick={(e) => { e.stopPropagation(); handleEditSession(session); }}
-                                                className="flex items-center bg-background p-1.5 rounded cursor-pointer hover:bg-gray-700 truncate"
-                                                title={`${session.title}${systemInfo ? ` (${systemInfo.name})` : ''}`}
+                                                className="flex items-center justify-between bg-background p-1.5 rounded group"
                                             >
-                                                <span
-                                                    className="w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0 border border-black/20"
-                                                    style={{ backgroundColor: systemInfo ? systemInfo.color : '#4b5563' }}
-                                                ></span>
-                                                <span className="text-white text-xs truncate">{session.title}</span>
+                                                <div
+                                                    className="flex items-center truncate flex-grow cursor-pointer"
+                                                    onClick={(e) => { e.stopPropagation(); handleEditSession(session); }}
+                                                    title={`Edit: ${session.title}${systemInfo ? ` (${systemInfo.name})` : ''}`}
+                                                >
+                                                    <span
+                                                        className="w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0 border border-black/20"
+                                                        style={{ backgroundColor: systemInfo ? systemInfo.color : '#4b5563' }}
+                                                    ></span>
+                                                    <span className="text-white text-xs truncate">{session.title}</span>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteSession(session); }}
+                                                    className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-0.5 rounded flex-shrink-0"
+                                                    title="Delete session"
+                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                </button>
                                             </div>
                                         );
                                     })}
