@@ -43,6 +43,7 @@ const seedDatabase = async () => {
         }
 
         console.log('Seeding database with initial data...');
+        const now = new Date().toISOString();
 
         // --- Game Systems ---
         const wh40k = await gameSystemsCollection.insertOne({
@@ -89,6 +90,8 @@ const seedDatabase = async () => {
                 status: 'Ready to Game',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Intercessor',
                 paintingNotes: 'Base: Macragge Blue\nShade: Nuln Oil\nHighlight: Calgar Blue',
+                createdAt: now,
+                lastUpdated: now,
             },
             {
                 name: 'Ork Boy',
@@ -99,6 +102,8 @@ const seedDatabase = async () => {
                 status: 'Primed',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Ork+Boy',
                 paintingNotes: '',
+                createdAt: now,
+                lastUpdated: now,
             },
             {
                 name: 'Wolverine',
@@ -109,6 +114,8 @@ const seedDatabase = async () => {
                 status: 'Painted',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Wolverine',
                 paintingNotes: 'Suit: Averland Sunset\nStripes: Abaddon Black\nClaws: Leadbelcher',
+                createdAt: now,
+                lastUpdated: now,
             }
         ]);
 
@@ -324,6 +331,7 @@ app.get('/api/models', async (req, res) => {
 
 app.post('/api/models', async (req, res) => {
     const { name, armyIds, gameSystemId, description, quantity, status, imageUrl, paintingNotes } = req.body;
+    const now = new Date().toISOString();
     // Convert incoming string IDs to ObjectIds before inserting into the database.
     const newModelData = {
         name,
@@ -334,6 +342,8 @@ app.post('/api/models', async (req, res) => {
         status,
         imageUrl,
         paintingNotes,
+        createdAt: now,
+        lastUpdated: now,
     };
     const result = await modelsCollection.insertOne(newModelData);
     const newDoc = await modelsCollection.findOne({_id: result.insertedId});
@@ -355,6 +365,9 @@ app.put('/api/models/:id', async (req, res) => {
     
     // The `id` property is not part of the MongoDB document, so remove it before updating.
     delete modelUpdates.id;
+
+    // Automatically set the lastUpdated timestamp on every update.
+    modelUpdates.lastUpdated = new Date().toISOString();
 
     const result = await modelsCollection.findOneAndUpdate(
         { _id: toMongoId(id) }, 

@@ -23,8 +23,8 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
   // Access global data and functions from the DataContext.
   const { gameSystems, armies, models, addModel, updateModel } = useData();
   
-  // State to hold the form data. Omit<'id'> is used because the ID is not part of the form.
-  const [formData, setFormData] = useState<Omit<Model, 'id'>>({
+  // State to hold the form data. Omit is used because the excluded fields are not part of the form.
+  const [formData, setFormData] = useState<Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>>({
     name: '',
     armyIds: [],
     gameSystemId: '',
@@ -44,8 +44,10 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
   useEffect(() => {
     if (model) {
       // If a model is passed, it means we are in "edit" mode.
-      // Populate the form with the existing model's data.
-      setFormData({ ...model, armyIds: model.armyIds || [], paintingNotes: model.paintingNotes || '' });
+      // Destructure to separate non-form fields from the model data.
+      const { id, createdAt, lastUpdated, ...modelData } = model;
+      // Populate the form with the existing model's data, ensuring optional fields have defaults.
+      setFormData({ ...modelData, armyIds: model.armyIds || [], paintingNotes: model.paintingNotes || '' });
       setImagePreview(model.imageUrl || null);
     } else {
       // If no model is passed, we are in "add" mode.

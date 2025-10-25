@@ -14,6 +14,17 @@ import { PlusIcon } from '../components/icons/Icons';
 import { Model } from '../types';
 import Papa from 'papaparse';
 
+// Configuration for status sort order.
+const statusConfig: { [key in Model['status']]: { order: number; } } = {
+    'Ready to Game': { order: 1 },
+    'Based': { order: 2 },
+    'Painted': { order: 3 },
+    'Primed': { order: 4 },
+    'Assembled': { order: 5 },
+    'Printed': { order: 6 },
+    'Purchased': { order: 7 },
+};
+
 
 const CollectionPage: React.FC = () => {
   // Destructure data and functions from the global DataContext.
@@ -28,10 +39,11 @@ const CollectionPage: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [modelForDetail, setModelForDetail] = useState<Model | null>(null);
 
-  // State for filter controls.
+  // State for filter and sort controls.
   const [gameSystemFilter, setGameSystemFilter] = useState<string>('');
   const [armyFilter, setArmyFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortOption, setSortOption] = useState<string>('updated-desc');
 
   // State for bulk action mode.
   const [isBulkEditMode, setIsBulkEditMode] = useState(false);
@@ -104,14 +116,40 @@ const CollectionPage: React.FC = () => {
     setModelForDetail(null);
   };
 
-  // Memoized filtering logic. `useMemo` prevents this expensive calculation from running on every
-  // render. It only recalculates when one of its dependencies (models, filters) changes.
-  const filteredModels = useMemo(() => {
-    return models
+  // Memoized filtering and sorting logic. `useMemo` prevents this expensive calculation from running
+  // on every render. It only recalculates when one of its dependencies changes.
+  const sortedAndFilteredModels = useMemo(() => {
+    const filtered = models
       .filter(model => !gameSystemFilter || model.gameSystemId === gameSystemFilter)
       .filter(model => !armyFilter || model.armyIds.includes(armyFilter))
       .filter(model => model.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [models, gameSystemFilter, armyFilter, searchQuery]);
+
+    // Create a mutable copy for sorting.
+    const sortable = [...filtered];
+
+    sortable.sort((a, b) => {
+      switch (sortOption) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'status':
+          return statusConfig[a.status].order - statusConfig[b.status].order;
+        case 'quantity-desc':
+          return b.quantity - a.quantity;
+        case 'quantity-asc':
+          return a.quantity - b.quantity;
+        case 'updated-asc':
+          // Fallback to 0 for models that might not have a timestamp yet.
+          return new Date(a.lastUpdated || 0).getTime() - new Date(b.lastUpdated || 0).getTime();
+        case 'updated-desc':
+        default:
+          return new Date(b.lastUpdated || 0).getTime() - new Date(a.lastUpdated || 0).getTime();
+      }
+    });
+
+    return sortable;
+  }, [models, gameSystemFilter, armyFilter, searchQuery, sortOption]);
 
   // Memoized calculation for armies available in the dropdown, based on the selected game system.
   const availableArmies = useMemo(() => {
@@ -145,7 +183,7 @@ const CollectionPage: React.FC = () => {
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       // Select all models that are currently visible based on filters.
-      setSelectedModelIds(filteredModels.map(m => m.id));
+      setSelectedModelIds(sortedAndFilteredModels.map(m => m.id));
     } else {
       setSelectedModelIds([]);
     }
@@ -168,7 +206,7 @@ const CollectionPage: React.FC = () => {
   const handleExportCsv = () => {
     // Map the filtered model data to a format suitable for CSV export.
     // This includes resolving IDs to names for better readability.
-    const dataToExport = filteredModels.map(model => {
+    const dataToExport = sortedAndFilteredModels.map(model => {
       const gameSystem = gameSystems.find(gs => gs.id === model.gameSystemId);
       const associatedArmies = armies.filter(a => model.armyIds.includes(a.id));
       const armyNames = associatedArmies.map(a => a.name).join(', ');
@@ -233,8 +271,8 @@ const CollectionPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Filter controls section */}
-      <div className="mb-6 p-4 bg-surface rounded-lg shadow-md flex flex-col sm:flex-row gap-4">
+      {/* Filter and sort controls section */}
+      <div className="mb-6 p-4 bg-surface rounded-lg shadow-md flex flex-col lg:flex-row gap-4">
           <input
             type="text"
             placeholder="Search by name..."
@@ -242,10 +280,11 @@ const CollectionPage: React.FC = () => {
             onChange={e => setSearchQuery(e.target.value)}
             className="flex-grow bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           />
+        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
          <select
             value={gameSystemFilter}
             onChange={e => setGameSystemFilter(e.target.value)}
-            className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary sm:w-1/2 lg:w-auto"
         >
             <option value="">All Game Systems</option>
             {gameSystems.map(gs => <option key={gs.id} value={gs.id}>{gs.name}</option>)}
@@ -253,18 +292,32 @@ const CollectionPage: React.FC = () => {
         <select
             value={armyFilter}
             onChange={e => setArmyFilter(e.target.value)}
-            className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary sm:w-1/2 lg:w-auto"
             disabled={!gameSystemFilter && availableArmies.length === 0}
         >
             <option value="">All Armies</option>
             {availableArmies.map(army => <option key={army.id} value={army.id}>{army.name}</option>)}
         </select>
+        <select
+            value={sortOption}
+            onChange={e => setSortOption(e.target.value)}
+            className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary w-full lg:w-auto"
+          >
+            <option value="updated-desc">Sort: Last Updated (Newest)</option>
+            <option value="updated-asc">Sort: Last Updated (Oldest)</option>
+            <option value="name-asc">Sort: Name (A-Z)</option>
+            <option value="name-desc">Sort: Name (Z-A)</option>
+            <option value="status">Sort: Status</option>
+            <option value="quantity-desc">Sort: Quantity (High-Low)</option>
+            <option value="quantity-asc">Sort: Quantity (Low-High)</option>
+          </select>
+        </div>
       </div>
 
       {/* Display the grid of model cards or an empty state message. */}
-      {filteredModels.length > 0 ? (
+      {sortedAndFilteredModels.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredModels.map(model => (
+          {sortedAndFilteredModels.map(model => (
             <ModelCard
               key={model.id}
               model={model}
@@ -279,7 +332,7 @@ const CollectionPage: React.FC = () => {
       ) : (
         <div className="text-center py-16 bg-surface rounded-lg border border-border">
             <div className="flex justify-center mb-4">
-                <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 S0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
             </div>
           {models.length === 0 ? (
             <>
@@ -303,7 +356,7 @@ const CollectionPage: React.FC = () => {
                       type="checkbox"
                       className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary bg-surface"
                       onChange={handleSelectAll}
-                      checked={filteredModels.length > 0 && selectedModelIds.length === filteredModels.length}
+                      checked={sortedAndFilteredModels.length > 0 && selectedModelIds.length === sortedAndFilteredModels.length}
                       title="Select All/None"
                   />
                   <span className="font-semibold">{selectedModelIds.length} selected</span>

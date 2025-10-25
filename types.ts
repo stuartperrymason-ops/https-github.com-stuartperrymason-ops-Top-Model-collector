@@ -35,6 +35,8 @@ export interface Model {
   status: 'Purchased' | 'Printed' | 'Assembled' | 'Primed' | 'Painted' | 'Based' | 'Ready to Game'; // The current stage in the painting/hobby process.
   imageUrl?: string; // Optional URL or base64 data string for an image of the model.
   paintingNotes?: string; // Optional field for storing paint recipes, colors used, or other hobby notes.
+  createdAt: string; // ISO 8601 date string of when the model was created.
+  lastUpdated: string; // ISO 8601 date string of when the model was last updated.
 }
 
 // Represents a temporary notification message (a "toast") shown to the user.

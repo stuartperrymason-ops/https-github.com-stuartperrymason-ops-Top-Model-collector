@@ -22,9 +22,11 @@ type CsvRow = {
 };
 
 // Define the structure for the result of validating a single CSV row.
+// FIX: The processed model data for a new model will not have an 'id', 'createdAt', or 'lastUpdated'.
+// The type is updated to reflect this, resolving the error when creating `modelData`.
 interface ValidationResult {
   row: CsvRow; // The original row data.
-  data: Omit<Model, 'id'> | null; // The processed model data, or null if there's an error.
+  data: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'> | null; // The processed model data, or null if there's an error.
   status: 'NEW' | 'DUPLICATE' | 'ERROR'; // The validation status.
   errorMessage?: string; // An error message if status is 'ERROR'.
   import: boolean; // User's choice for duplicates, defaults to true.
@@ -228,7 +230,7 @@ const BulkDataPage: React.FC = () => {
             const allArmies = [...armies, ...createdArmies];
             
             // Step 3: Prepare the final list of models to add, resolving names to IDs.
-            const modelsToAdd: Omit<Model, 'id'>[] = [];
+            const modelsToAdd: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>[] = [];
             let successCount = 0;
             let skippedDuplicatesCount = 0;
             const finalErrors: ValidationResult[] = [];

@@ -31,13 +31,13 @@ interface DataContextState {
   updateArmy: (id: string, name: string, gameSystemId: string) => Promise<void>;
   deleteArmy: (id: string) => Promise<void>;
   // Model functions
-  addModel: (model: Omit<Model, 'id'>) => Promise<void>;
+  addModel: (model: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>) => Promise<void>;
   updateModel: (id: string, model: Partial<Omit<Model, 'id'>>) => Promise<void>;
   deleteModel: (id: string) => Promise<void>;
   // Bulk Model functions
   bulkUpdateModels: (ids: string[], updates: Partial<Omit<Model, 'id'>>) => Promise<void>;
   bulkDeleteModels: (ids: string[]) => Promise<void>;
-  bulkAddModels: (models: Omit<Model, 'id'>[]) => Promise<void>;
+  bulkAddModels: (models: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>[]) => Promise<void>;
 }
 
 // Create the context with a default value of `undefined`.
@@ -195,7 +195,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   };
 
   // --- CRUD operations for Models ---
-  const addModel = async (model: Omit<Model, 'id'>) => {
+  const addModel = async (model: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>) => {
     try {
       const newModel = await apiService.addModel(model);
       setModels(prev => [...prev, newModel]);
@@ -229,7 +229,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   };
 
   // --- Bulk operations for Models ---
-  const bulkAddModels = async (modelsToAdd: Omit<Model, 'id'>[]) => {
+  const bulkAddModels = async (modelsToAdd: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>[]) => {
     try {
       // The API service calls `addModel` for each item. In a real-world scenario,
       // this would ideally be a single API endpoint that accepts an array of models.
@@ -248,11 +248,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     try {
       // In a real app, this would be a single API call like `PATCH /models` with a list of IDs.
       // For our mock server, we loop and call the single update endpoint for each ID.
-      await Promise.all(ids.map(id => apiService.updateModel(id, updates)));
+      // This now returns the fully updated models from the server, including the new `lastUpdated` timestamp.
+      const updatedModels = await Promise.all(ids.map(id => apiService.updateModel(id, updates)));
+      
+      // Create a map for efficient lookup to update the local state.
+      const updatedModelsMap = new Map(updatedModels.map(m => [m.id, m]));
       
       // Update local state in one go for better performance and to avoid multiple re-renders.
       setModels(prev =>
-        prev.map(m => (ids.includes(m.id) ? { ...m, ...updates, id: m.id } : m))
+        prev.map(m => updatedModelsMap.get(m.id) || m)
       );
       addToast(`${ids.length} models updated successfully!`, 'success');
     } catch (err) {
