@@ -14,6 +14,7 @@ import DashboardPage from './pages/DashboardPage';
 import BulkDataPage from './pages/BulkDataPage';
 import SettingsPage from './pages/SettingsPage';
 import { DataProvider } from './context/DataContext';
+import ToastContainer from './components/ToastContainer';
 
 const App: React.FC = () => {
   return (
@@ -41,6 +42,8 @@ const App: React.FC = () => {
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>
+          {/* The ToastContainer is rendered here to display global notifications. */}
+          <ToastContainer />
         </div>
       </HashRouter>
     </DataProvider>

@@ -39,6 +39,45 @@ const CollectionPage: React.FC = () => {
   // State for the status to be applied during a bulk update.
   const [bulkStatus, setBulkStatus] = useState<Model['status']>('Purchased');
   
+  // Effect for dynamic theming based on the selected game system.
+  useEffect(() => {
+    const mainElement = document.querySelector('main');
+    if (!mainElement) return;
+    
+    // Store the original inline style, which is likely empty.
+    const originalBgColor = mainElement.style.backgroundColor;
+    const root = document.documentElement;
+
+    // A helper function to reset all theme-related styles to their defaults.
+    const resetToDefault = () => {
+        root.style.removeProperty('--theme-primary-color');
+        root.style.removeProperty('--theme-secondary-color');
+        mainElement.style.backgroundColor = originalBgColor;
+    };
+
+    if (gameSystemFilter) {
+      const selectedSystem = gameSystems.find(gs => gs.id === gameSystemFilter);
+      // If the selected system exists and has a color scheme defined, apply it.
+      if (selectedSystem && selectedSystem.colorScheme) {
+        root.style.setProperty('--theme-primary-color', selectedSystem.colorScheme.primary);
+        root.style.setProperty('--theme-secondary-color', selectedSystem.colorScheme.secondary);
+        mainElement.style.backgroundColor = selectedSystem.colorScheme.background;
+        mainElement.classList.add('transition-colors', 'duration-500');
+      } else {
+        resetToDefault();
+      }
+    } else {
+      // If no filter is applied, reset to the default theme.
+      resetToDefault();
+    }
+
+    // The cleanup function of the effect is crucial. It runs when the component unmounts
+    // or before the effect re-runs, ensuring that the theme doesn't "leak" to other pages.
+    return () => {
+        resetToDefault();
+    };
+  }, [gameSystemFilter, gameSystems]);
+
 
   // --- Modal Handlers ---
   const handleAddModelClick = () => {
@@ -187,7 +226,7 @@ const CollectionPage: React.FC = () => {
            </button>
            <button
              onClick={handleAddModelClick}
-             className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 focus:ring-offset-background transition duration-300"
+             className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background transition-all duration-300"
            >
              <PlusIcon />
              Add Model

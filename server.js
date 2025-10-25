@@ -45,9 +45,18 @@ const seedDatabase = async () => {
         console.log('Seeding database with initial data...');
 
         // --- Game Systems ---
-        const wh40k = await gameSystemsCollection.insertOne({ name: 'Warhammer 40,000' });
-        const aos = await gameSystemsCollection.insertOne({ name: 'Age of Sigmar' });
-        const mcp = await gameSystemsCollection.insertOne({ name: 'Marvel Crisis Protocol' });
+        const wh40k = await gameSystemsCollection.insertOne({
+            name: 'Warhammer 40,000',
+            colorScheme: { primary: '#fde047', secondary: '#1e40af', background: '#0c1440' }
+        });
+        const aos = await gameSystemsCollection.insertOne({
+            name: 'Age of Sigmar',
+            colorScheme: { primary: '#60a5fa', secondary: '#facc15', background: '#1e3a8a' }
+        });
+        const mcp = await gameSystemsCollection.insertOne({
+            name: 'Marvel Crisis Protocol',
+            colorScheme: { primary: '#ef4444', secondary: '#3b82f6', background: '#4c0519' }
+        });
 
         // Store the inserted IDs for creating relationships.
         const wh40kId = wh40k.insertedId;

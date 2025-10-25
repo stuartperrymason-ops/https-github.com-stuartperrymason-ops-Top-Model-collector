@@ -15,8 +15,6 @@ Welcome to ModelForge, your digital armory for managing tabletop miniatures. Thi
 - **Customizable Settings**: Manage the game systems and armies that make up your collection.
 - **AI-Powered Descriptions**: Use the Gemini API to automatically generate rich, flavorful descriptions for your models.
 
-
-
 ---
 
 ## Application Flow Diagrams
