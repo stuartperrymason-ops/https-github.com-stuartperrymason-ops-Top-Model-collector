@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { GameSystem, Army, Model, ToastMessage, PaintingSession } from '../types';
+import { GameSystem, Army, Model, ToastMessage, PaintingSession, Paint } from '../types';
 import * as apiService from '../services/apiService';
 
 // Define the shape of the context state. This interface describes all the data
@@ -17,6 +17,7 @@ interface DataContextState {
   armies: Army[];
   models: Model[];
   paintingSessions: PaintingSession[];
+  paints: Paint[];
   loading: boolean; // Indicates if initial data is being fetched.
   error: string | null; // Stores any critical error messages.
   toasts: ToastMessage[]; // An array of active toast notifications.
@@ -43,6 +44,10 @@ interface DataContextState {
   addPaintingSession: (session: Omit<PaintingSession, 'id'>) => Promise<void>;
   updatePaintingSession: (id: string, session: Partial<Omit<PaintingSession, 'id'>>) => Promise<void>;
   deletePaintingSession: (id: string) => Promise<void>;
+  // Paint functions
+  addPaint: (paint: Omit<Paint, 'id'>) => Promise<void>;
+  updatePaint: (id: string, paint: Partial<Omit<Paint, 'id'>>) => Promise<void>;
+  deletePaint: (id: string) => Promise<void>;
 }
 
 // Create the context with a default value of `undefined`.
@@ -61,6 +66,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [armies, setArmies] = useState<Army[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [paintingSessions, setPaintingSessions] = useState<PaintingSession[]>([]);
+  const [paints, setPaints] = useState<Paint[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -84,17 +90,19 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       // Use Promise.all to fetch all data concurrently for faster loading.
-      const [systems, armyData, modelData, sessionData] = await Promise.all([
+      const [systems, armyData, modelData, sessionData, paintData] = await Promise.all([
         apiService.getGameSystems(),
         apiService.getArmies(),
         apiService.getModels(),
         apiService.getPaintingSessions(),
+        apiService.getPaints(),
       ]);
       // Update state with the fetched data.
       setGameSystems(systems);
       setArmies(armyData);
       setModels(modelData);
       setPaintingSessions(sessionData);
+      setPaints(paintData);
     } catch (err) {
       const errorMessage = 'Failed to load data. Please try refreshing the page.';
       setError(errorMessage);
@@ -318,12 +326,47 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
 
+  // --- CRUD operations for Paints ---
+  const addPaint = async (paint: Omit<Paint, 'id'>) => {
+    try {
+      const newPaint = await apiService.addPaint(paint);
+      setPaints(prev => [...prev, newPaint].sort((a, b) => a.name.localeCompare(b.name)));
+      addToast('Paint added successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to add paint:', err);
+      addToast('Failed to add paint.', 'error');
+    }
+  };
+
+  const updatePaint = async (id: string, paint: Partial<Omit<Paint, 'id'>>) => {
+    try {
+      const updatedPaint = await apiService.updatePaint(id, paint);
+      setPaints(prev => prev.map(p => (p.id === id ? updatedPaint : p)));
+      addToast('Paint updated successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to update paint:', err);
+      addToast('Failed to update paint.', 'error');
+    }
+  };
+
+  const deletePaint = async (id: string) => {
+    try {
+      await apiService.deletePaint(id);
+      setPaints(prev => prev.filter(p => p.id !== id));
+      addToast('Paint deleted successfully!', 'success');
+    } catch (err) {
+      console.error('Failed to delete paint:', err);
+      addToast('Failed to delete paint.', 'error');
+    }
+  };
+
   // The 'value' object bundles all state and functions to be provided to consuming components.
   const value = {
     gameSystems,
     armies,
     models,
     paintingSessions,
+    paints,
     loading,
     error,
     toasts,
@@ -343,6 +386,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     addPaintingSession,
     updatePaintingSession,
     deletePaintingSession,
+    addPaint,
+    updatePaint,
+    deletePaint,
   };
 
   // The DataContext.Provider makes the 'value' object available to all child components.
