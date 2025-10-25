@@ -14,8 +14,8 @@ const app = express();
 const PORT = 3001;
 
 // MongoDB connection settings, read from environment variables with sensible defaults.
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
-const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://stuartperrymason_db_user:vfVZ89HW@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector';
+const DB_NAME = process.env.DB_NAME || 'tabletop-collector';
 const client = new MongoClient(MONGODB_URI);
 
 // Global variables to hold references to the database and collections once connected.
