@@ -10,7 +10,8 @@ import { GameSystem, Army, Model, PaintingSession, Paint } from '../types';
 
 // The base URL for the backend API. It uses an environment variable for production/staging
 // and falls back to the local server URL for development.
-// FIX: Switched to process.env to resolve Vite-specific type errors.
+// FIX: Use `import.meta.env` for Vite environment variables.
+// FIX: Using process.env to align with other services and fix type errors.
 const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // A helper function to handle fetch responses consistently.

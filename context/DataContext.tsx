@@ -5,7 +5,7 @@
  * This program was written by Stuart Mason October 2025.
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, ChangeEvent, FormEvent } from 'react';
 import { GameSystem, Army, Model, ToastMessage, PaintingSession, Paint } from '../types';
 import * as apiService from '../services/apiService';
 
@@ -393,6 +393,84 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   // The DataContext.Provider makes the 'value' object available to all child components.
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+};
+
+/**
+ * @file useForm.ts
+ * @description A custom hook for managing form state, validation, and submission logic.
+ * This abstracts common form handling patterns to make form components cleaner and more reusable.
+ * This program was written by Stuart Mason October 2025.
+ */
+
+// Defines the shape of the object returned by the useForm hook.
+interface UseFormReturn<T> {
+  values: T;
+  errors: Record<string, string>;
+  isSubmitting: boolean;
+  setValues: React.Dispatch<React.SetStateAction<T>>;
+  handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  setFormValue: <K extends keyof T>(key: K, value: T[K]) => void;
+  // FIX: Correct the event handler type to match the form's onSubmit prop.
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+}
+
+/**
+ * A generic custom hook for managing form logic.
+ * @param initialState - The initial state of the form.
+ * @param onSubmit - An async callback function to execute when the form is submitted and valid.
+ * @param validate - An optional function that takes form values and returns an object of validation errors.
+ */
+export const useForm = <T extends object>(
+  initialState: T,
+  onSubmit: (values: T) => Promise<void>,
+  validate?: (values: T) => Record<string, string>
+): UseFormReturn<T> => {
+  const [values, setValues] = useState<T>(initialState);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // A generic change handler that works for most standard input types.
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const processedValue = (e.target as HTMLInputElement).type === 'number' ? parseInt(value, 10) || 0 : value;
+    setValues(prev => ({ ...prev, [name]: processedValue }));
+  };
+
+  // A more direct way to set a specific form field's value, useful for custom components.
+  const setFormValue = <K extends keyof T>(key: K, value: T[K]) => {
+    setValues(prev => ({ ...prev, [key]: value }));
+  };
+
+  // The main submission handler.
+  // FIX: Correct the event handler type to match the form's onSubmit prop.
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    const validationErrors = validate ? validate(values) : {};
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length === 0) {
+      setIsSubmitting(true);
+      try {
+        await onSubmit(values);
+      } catch (error) {
+        console.error("Submission failed:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  return {
+    values,
+    errors,
+    isSubmitting,
+    setValues,
+    handleChange,
+    setFormValue,
+    handleSubmit,
+  };
 };
 
 // Custom hook to simplify the use of the data context.

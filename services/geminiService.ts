@@ -15,17 +15,9 @@ import { GoogleGenAI } from "@google/genai";
  * @returns A promise that resolves to the generated description string.
  */
 export const generateDescription = async (modelName: string, armyName: string, gameSystem: string): Promise<string> => {
-  // A crucial security and functionality check. The application must have the API key
-  // configured in its environment variables to communicate with the Gemini API.
-  // FIX: Switched to process.env.API_KEY to align with guidelines and resolve type errors.
-  if (!process.env.API_KEY) {
-    console.error("API_KEY environment variable not set.");
-    return "API key not configured. Please contact the administrator.";
-  }
-  
   try {
-    // Initialize the Google GenAI client with the API key from the environment.
-    // FIX: Switched to process.env.API_KEY to align with guidelines and resolve type errors.
+    // FIX: Initialize the Google GenAI client with the API key from process.env, as per the coding guidelines.
+    // The guidelines state to assume `process.env.API_KEY` is pre-configured and accessible.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Construct a detailed prompt to guide the AI. This is a form of "prompt engineering"

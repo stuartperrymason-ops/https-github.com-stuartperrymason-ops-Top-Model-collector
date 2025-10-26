@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PaintingSession } from '../types';
-import { useData } from '../context/DataContext';
+import { useData, useForm } from '../context/DataContext';
 import { XIcon, TrashIcon } from './icons/Icons';
 
 interface PaintingSessionFormModalProps {
@@ -23,57 +23,22 @@ const PaintingSessionFormModal: React.FC<PaintingSessionFormModalProps> = ({
   selectedDate,
 }) => {
   const { models, gameSystems, addPaintingSession, updatePaintingSession, deletePaintingSession } = useData();
-  const [formData, setFormData] = useState<Omit<PaintingSession, 'id'>>({
+  
+  // State for separate date and time inputs for better UX
+  const [formDate, setFormDate] = useState('');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('12:00');
+  
+  const initialState: Omit<PaintingSession, 'id'> = {
     title: '',
     start: '',
     end: '',
     notes: '',
     modelIds: [],
     gameSystemId: '',
-  });
-  
-  // State for separate date and time inputs for better UX
-  const [formDate, setFormDate] = useState('');
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('12:00');
-
-  useEffect(() => {
-    if (sessionToEdit) {
-      // Editing existing session
-      const startDate = new Date(sessionToEdit.start);
-      const endDate = new Date(sessionToEdit.end);
-      setFormData({ ...sessionToEdit, notes: sessionToEdit.notes || '', gameSystemId: sessionToEdit.gameSystemId || '' });
-      setFormDate(startDate.toISOString().split('T')[0]);
-      setStartTime(startDate.toTimeString().substring(0, 5));
-      setEndTime(endDate.toTimeString().substring(0, 5));
-    } else if (selectedDate) {
-      // Creating a new session for a selected date
-      setFormData({
-        title: '',
-        start: '',
-        end: '',
-        notes: '',
-        modelIds: [],
-        gameSystemId: '',
-      });
-      setFormDate(selectedDate.toISOString().split('T')[0]);
-      setStartTime('09:00');
-      setEndTime('12:00');
-    }
-  }, [sessionToEdit, selectedDate, isOpen]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
-    setFormData(prev => ({...prev, modelIds: selectedIds}));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFormSubmit = async (formValues: Omit<PaintingSession, 'id'>) => {
     if (!formDate || !startTime || !endTime) {
         alert("Please ensure date and times are set.");
         return;
@@ -81,7 +46,7 @@ const PaintingSessionFormModal: React.FC<PaintingSessionFormModalProps> = ({
     
     // Combine date and time into full ISO strings before submitting
     const finalFormData = {
-        ...formData,
+        ...formValues,
         start: new Date(`${formDate}T${startTime}`).toISOString(),
         end: new Date(`${formDate}T${endTime}`).toISOString(),
     };
@@ -92,6 +57,38 @@ const PaintingSessionFormModal: React.FC<PaintingSessionFormModalProps> = ({
       await addPaintingSession(finalFormData);
     }
     onClose();
+  };
+
+  const {
+    values: formData,
+    setValues: setFormData,
+    handleChange,
+    setFormValue,
+    handleSubmit,
+    isSubmitting
+  } = useForm(initialState, handleFormSubmit);
+
+  useEffect(() => {
+    if (sessionToEdit) {
+      // Editing existing session
+      const startDate = new Date(sessionToEdit.start);
+      const endDate = new Date(sessionToEdit.end);
+      setFormData({ ...initialState, ...sessionToEdit, notes: sessionToEdit.notes || '', gameSystemId: sessionToEdit.gameSystemId || '' });
+      setFormDate(startDate.toISOString().split('T')[0]);
+      setStartTime(startDate.toTimeString().substring(0, 5));
+      setEndTime(endDate.toTimeString().substring(0, 5));
+    } else if (selectedDate) {
+      // Creating a new session for a selected date
+      setFormData(initialState);
+      setFormDate(selectedDate.toISOString().split('T')[0]);
+      setStartTime('09:00');
+      setEndTime('12:00');
+    }
+  }, [sessionToEdit, selectedDate, isOpen, setFormData]);
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
+    setFormValue('modelIds', selectedIds);
   };
 
   const handleDelete = async () => {
@@ -203,7 +200,8 @@ const PaintingSessionFormModal: React.FC<PaintingSessionFormModalProps> = ({
                     <button
                         type="button"
                         onClick={handleDelete}
-                        className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                        disabled={isSubmitting}
+                        className="p-2 text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
                         title="Delete Session"
                     >
                         <TrashIcon />
@@ -214,8 +212,8 @@ const PaintingSessionFormModal: React.FC<PaintingSessionFormModalProps> = ({
               <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors">
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors">
-                {sessionToEdit ? 'Save Changes' : 'Add Session'}
+              <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {isSubmitting ? 'Saving...' : (sessionToEdit ? 'Save Changes' : 'Add Session')}
               </button>
             </div>
           </div>
