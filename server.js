@@ -47,6 +47,8 @@ async function run() {
 }
 const MONGODB_URI = process.env.MONGODB_URI || `mongodb+srv://stuartperrymason_db_user:${process.env.DB_PASSWORD}@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector`;
 const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
+
+// Initialize the MongoDB Client. There should only be one declaration of 'client'.
 const client = new MongoClient(MONGODB_URI, {
   serverApi: {
     version: ServerApiVersion.v1,
