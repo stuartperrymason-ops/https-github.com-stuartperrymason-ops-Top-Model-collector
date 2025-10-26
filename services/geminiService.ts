@@ -16,8 +16,9 @@ import { GoogleGenAI } from "@google/genai";
  */
 export const generateDescription = async (modelName: string, armyName: string, gameSystem: string): Promise<string> => {
   try {
-    // FIX: Initialize the Google GenAI client with the API key from process.env, as per the coding guidelines.
-    // The guidelines state to assume `process.env.API_KEY` is pre-configured and accessible.
+    // FIX: Switched from `import.meta.env` to `process.env` to align with the Gemini API
+    // coding guidelines and resolve TypeScript errors about missing Vite client types.
+    // The execution environment is expected to have `process.env.API_KEY` pre-configured.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Construct a detailed prompt to guide the AI. This is a form of "prompt engineering"
