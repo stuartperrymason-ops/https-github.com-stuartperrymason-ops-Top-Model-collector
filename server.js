@@ -12,7 +12,8 @@ const { MongoClient, ObjectId, ServerApiVersion } = require('mongodb');
 
 // --- App Initialization & Middleware ---
 const app = express();
-const PORT = 3001;
+// Use the port from the environment for deployment, or 3001 for local development.
+const PORT = process.env.PORT || 3001;
 // `cors()` enables Cross-Origin Resource Sharing, allowing the frontend (on a different port) to make requests to this server.
 app.use(cors());
 // `express.json()` is a body-parser that parses incoming request bodies with JSON payloads.

@@ -97,6 +97,7 @@ const PaintsPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [manufacturerFilter, setManufacturerFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
+    const [colorSchemeFilter, setColorSchemeFilter] = useState('');
     const [sortOption, setSortOption] = useState<string>('name-asc');
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -119,14 +120,16 @@ const PaintsPage: React.FC = () => {
         }
     };
 
-    const uniqueManufacturers = useMemo(() => [...new Set(paints.map(p => p.manufacturer))], [paints]);
+    const uniqueManufacturers = useMemo(() => [...new Set(paints.map(p => p.manufacturer).sort())], [paints]);
+    const uniqueColorSchemes = useMemo(() => [...new Set(paints.map(p => p.colorScheme).sort())], [paints]);
     const paintTypes: Paint['paintType'][] = ['Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air'];
 
     const sortedAndFilteredPaints = useMemo(() => {
         const filtered = paints
             .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
             .filter(p => !manufacturerFilter || p.manufacturer === manufacturerFilter)
-            .filter(p => !typeFilter || p.paintType === typeFilter);
+            .filter(p => !typeFilter || p.paintType === typeFilter)
+            .filter(p => !colorSchemeFilter || p.colorScheme === colorSchemeFilter);
 
         const sortable = [...filtered];
 
@@ -140,6 +143,14 @@ const PaintsPage: React.FC = () => {
                     return a.manufacturer.localeCompare(b.manufacturer);
                 case 'manufacturer-desc':
                     return b.manufacturer.localeCompare(a.manufacturer);
+                case 'colorScheme-asc':
+                    return a.colorScheme.localeCompare(b.colorScheme);
+                case 'colorScheme-desc':
+                    return b.colorScheme.localeCompare(a.colorScheme);
+                case 'type-asc':
+                    return a.paintType.localeCompare(b.paintType);
+                case 'type-desc':
+                    return b.paintType.localeCompare(a.paintType);
                 case 'stock-desc':
                     return b.stock - a.stock;
                 case 'stock-asc':
@@ -150,7 +161,7 @@ const PaintsPage: React.FC = () => {
         });
 
         return sortable;
-    }, [paints, searchQuery, manufacturerFilter, typeFilter, sortOption]);
+    }, [paints, searchQuery, manufacturerFilter, typeFilter, colorSchemeFilter, sortOption]);
 
     if (loading) return <div className="flex justify-center items-center h-full"><p>Loading paints...</p></div>;
     if (error) return <div className="flex justify-center items-center h-full"><p className="text-red-500">{error}</p></div>;
@@ -197,6 +208,10 @@ const PaintsPage: React.FC = () => {
                         <option value="">All Types</option>
                         {paintTypes.map(type => <option key={type} value={type}>{type}</option>)}
                     </select>
+                    <select value={colorSchemeFilter} onChange={e => setColorSchemeFilter(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary sm:w-1/2 lg:w-auto">
+                        <option value="">All Color Schemes</option>
+                        {uniqueColorSchemes.map(cs => <option key={cs} value={cs}>{cs}</option>)}
+                    </select>
                     <select
                         value={sortOption}
                         onChange={e => setSortOption(e.target.value)}
@@ -206,6 +221,10 @@ const PaintsPage: React.FC = () => {
                         <option value="name-desc">Sort: Name (Z-A)</option>
                         <option value="manufacturer-asc">Sort: Manufacturer (A-Z)</option>
                         <option value="manufacturer-desc">Sort: Manufacturer (Z-A)</option>
+                        <option value="colorScheme-asc">Sort: Color Scheme (A-Z)</option>
+                        <option value="colorScheme-desc">Sort: Color Scheme (Z-A)</option>
+                        <option value="type-asc">Sort: Type (A-Z)</option>
+                        <option value="type-desc">Sort: Type (Z-A)</option>
                         <option value="stock-desc">Sort: Stock (High-Low)</option>
                         <option value="stock-asc">Sort: Stock (Low-High)</option>
                     </select>

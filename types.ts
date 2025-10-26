@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 /**
  * @file types.ts
  * @description This file contains TypeScript interfaces for the core data models

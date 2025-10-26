@@ -1,3 +1,6 @@
+// FIX: Add a triple-slash directive to include Vite's client types to provide type definitions for `import.meta.env`.
+/// <reference types="vite/client" />
+
 /**
  * @file apiService.ts
  * @description This service provides functions for interacting with the backend API.
@@ -8,8 +11,9 @@
 
 import { GameSystem, Army, Model, PaintingSession, Paint } from '../types';
 
-// The base URL for the backend API. In a real application, this would come from an environment variable.
-const API_BASE_URL = 'http://localhost:3001/api';
+// The base URL for the backend API. It uses an environment variable for production/staging
+// and falls back to the local server URL for development.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // A helper function to handle fetch responses consistently.
 // It checks if the response was successful (status 200-299). If not, it throws an error.
