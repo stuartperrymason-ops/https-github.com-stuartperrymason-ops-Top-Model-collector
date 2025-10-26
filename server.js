@@ -8,7 +8,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient, ObjectId, ServerApiVersion } = require('mongodb');
 
 // --- App Initialization & Middleware ---
 const app = express();
@@ -45,7 +45,16 @@ async function run() {
     await client.close();
   }
 }
-run().catch(console.dir);
+const MONGODB_URI = process.env.MONGODB_URI || `mongodb+srv://stuartperrymason_db_user:${process.env.DB_PASSWORD}@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector`;
+const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
+const client = new MongoClient(MONGODB_URI, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+
 // Global variables to hold references to the database and collections once connected.
 let db;
 let gameSystemsCollection;
