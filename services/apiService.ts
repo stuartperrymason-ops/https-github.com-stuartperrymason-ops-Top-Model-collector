@@ -10,10 +10,12 @@ import { GameSystem, Army, Model, PaintingSession, Paint } from '../types';
 
 // The base URL for the backend API. It uses an environment variable for production/staging
 // and falls back to the local server URL for development.
-// FIX: Switched from `import.meta.env` to `process.env` to resolve TypeScript errors
-// related to missing Vite client type definitions. The execution environment is
-// expected to provide these variables.
-const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+// In a Vite project, client-side environment variables must be accessed via `import.meta.env`
+// and be prefixed with `VITE_` in your .env file.
+// FIX: The reference to 'vite/client' was removed as it was causing a "Cannot find type definition" error.
+// To resolve the subsequent error with 'import.meta.env', a type assertion `(import.meta as any)` is used as a workaround
+// to inform TypeScript about the 'env' property without modifying the project's tsconfig.json.
+const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // A helper function to handle fetch responses consistently.
 // It checks if the response was successful (status 200-299). If not, it throws an error.
