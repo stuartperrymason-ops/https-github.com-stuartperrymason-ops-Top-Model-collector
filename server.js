@@ -23,7 +23,7 @@ app.use(express.json({ limit: '10mb' }));
 // --- MongoDB Configuration ---
 // The connection string is read from MONGODB_URI environment variable.
 // If it's not set, it defaults to a MongoDB Atlas connection string which requires a DB_PASSWORD environment variable.
-const { MongoClient, ServerApiVersion } = require('mongodb');
+    
 const uri = "mongodb+srv://stuartperrymason_db_user:vfVZ89HW@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector";
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
