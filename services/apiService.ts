@@ -1,4 +1,3 @@
-// FIX: Add a triple-slash directive to include Vite's client types to provide type definitions for `import.meta.env`.
 /// <reference types="vite/client" />
 
 /**
