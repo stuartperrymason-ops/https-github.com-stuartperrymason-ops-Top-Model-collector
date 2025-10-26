@@ -23,11 +23,14 @@ app.use(express.json({ limit: '10mb' }));
 // --- MongoDB Configuration ---
 // The connection string is read from MONGODB_URI environment variable.
 // If it's not set, it defaults to a MongoDB Atlas connection string which requires a DB_PASSWORD environment variable.
-    
-//const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://stuartperrymason_db_user:vfVZ89HW@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector";
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
+if (!process.env.MONGODB_URI && !process.env.DB_PASSWORD) {
+    console.error('FATAL ERROR: To connect to the default MongoDB Atlas database, a DB_PASSWORD environment variable must be set. Alternatively, provide a full MONGODB_URI.');
+    process.exit(1);
+}
+const MONGODB_URI = process.env.MONGODB_URI || `mongodb+srv://stuartperrymason_db_user:${process.env.DB_PASSWORD}@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector`;
+
+// Initialize the MongoDB Client. There should only be one declaration of 'client'.
+const client = new MongoClient(MONGODB_URI, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
@@ -583,6 +586,7 @@ app.delete('/api/paints/:id', async (req, res) => {
  */
 async function startServer() {
     try {
+        const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
         await client.connect();
         console.log('Connected successfully to MongoDB');
         db = client.db(DB_NAME);
