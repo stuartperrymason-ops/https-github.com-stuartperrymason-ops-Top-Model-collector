@@ -32,9 +32,22 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
 });
 
 // Promisify database methods for async/await support
-const dbRun = promisify(db.run).bind(db);
 const dbGet = promisify(db.get).bind(db);
 const dbAll = promisify(db.all).bind(db);
+
+// Custom promisify for db.run to resolve with the statement object ('this') which contains lastID
+const dbRun = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        // Must use a `function` declaration to get the correct `this` context from sqlite3
+        db.run(sql, params, function (err) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(this);
+            }
+        });
+    });
+};
 
 
 // --- Database Schema Setup ---

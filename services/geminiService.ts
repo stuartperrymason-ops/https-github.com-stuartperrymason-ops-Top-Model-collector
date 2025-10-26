@@ -1,6 +1,3 @@
-// FIX: Add Vite client types reference to enable `import.meta.env` for accessing environment variables.
-/// <reference types="vite/client" />
-
 /**
  * @file geminiService.ts
  * @description This service handles communication with the Google Gemini API.
@@ -20,14 +17,15 @@ import { GoogleGenAI } from "@google/genai";
 export const generateDescription = async (modelName: string, armyName: string, gameSystem: string): Promise<string> => {
   // A crucial security and functionality check. The application must have the API key
   // configured in its environment variables to communicate with the Gemini API.
-  // In a Vite project, environment variables must be prefixed with VITE_ and accessed via `import.meta.env`.
-  if (!import.meta.env.VITE_API_KEY) {
-    console.error("VITE_API_KEY environment variable not set.");
-    return "API key not configured. Please set the VITE_API_KEY environment variable in your .env file.";
+  // FIX: Switched to process.env.API_KEY to align with guidelines and resolve type errors.
+  if (!process.env.API_KEY) {
+    console.error("API_KEY environment variable not set.");
+    return "API key not configured. Please contact the administrator.";
   }
   
   try {
     // Initialize the Google GenAI client with the API key from the environment.
+    // FIX: Switched to process.env.API_KEY to align with guidelines and resolve type errors.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Construct a detailed prompt to guide the AI. This is a form of "prompt engineering"
