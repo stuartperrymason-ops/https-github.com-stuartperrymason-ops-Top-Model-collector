@@ -48,6 +48,10 @@ interface DataContextState {
   addPaint: (paint: Omit<Paint, 'id'>) => Promise<void>;
   updatePaint: (id: string, paint: Partial<Omit<Paint, 'id'>>) => Promise<void>;
   deletePaint: (id: string) => Promise<void>;
+  // Bulk Paint functions
+  bulkUpdatePaints: (ids: string[], updates: Partial<Omit<Paint, 'id'>>) => Promise<void>;
+  bulkDeletePaints: (ids: string[]) => Promise<void>;
+  bulkAddPaints: (paints: Omit<Paint, 'id'>[]) => Promise<void>;
 }
 
 // Create the context with a default value of `undefined`.
@@ -359,6 +363,42 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       addToast('Failed to delete paint.', 'error');
     }
   };
+  
+  // --- Bulk operations for Paints ---
+  const bulkAddPaints = async (paintsToAdd: Omit<Paint, 'id'>[]) => {
+    try {
+        const addedPaints = await Promise.all(
+            paintsToAdd.map(paint => apiService.addPaint(paint))
+        );
+        setPaints(prev => [...prev, ...addedPaints].sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (err) {
+        console.error('Failed to bulk add paints:', err);
+        addToast('An error occurred during bulk paint import.', 'error');
+    }
+  };
+
+  const bulkUpdatePaints = async (ids: string[], updates: Partial<Omit<Paint, 'id'>>) => {
+    try {
+        const updatedPaints = await Promise.all(ids.map(id => apiService.updatePaint(id, updates)));
+        const updatedPaintsMap = new Map(updatedPaints.map(p => [p.id, p]));
+        setPaints(prev => prev.map(p => updatedPaintsMap.get(p.id) || p));
+        addToast(`${ids.length} paints updated successfully!`, 'success');
+    } catch (err) {
+        console.error('Failed to bulk update paints:', err);
+        addToast('Failed to bulk update paints.', 'error');
+    }
+  };
+
+  const bulkDeletePaints = async (ids: string[]) => {
+    try {
+        await Promise.all(ids.map(id => apiService.deletePaint(id)));
+        setPaints(prev => prev.filter(p => !ids.includes(p.id)));
+        addToast(`${ids.length} paints deleted successfully!`, 'success');
+    } catch (err) {
+        console.error('Failed to bulk delete paints:', err);
+        addToast('Failed to bulk delete paints.', 'error');
+    }
+  };
 
   // The 'value' object bundles all state and functions to be provided to consuming components.
   const value = {
@@ -389,6 +429,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     addPaint,
     updatePaint,
     deletePaint,
+    bulkAddPaints,
+    bulkUpdatePaints,
+    bulkDeletePaints,
   };
 
   // The DataContext.Provider makes the 'value' object available to all child components.

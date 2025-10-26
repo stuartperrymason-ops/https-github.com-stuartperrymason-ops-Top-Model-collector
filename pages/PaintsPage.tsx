@@ -83,7 +83,7 @@ const PaintEditModal: React.FC<{
 };
 
 const PaintsPage: React.FC = () => {
-    const { paints, addPaint, updatePaint, deletePaint, loading, error } = useData();
+    const { paints, addPaint, updatePaint, deletePaint, bulkUpdatePaints, bulkDeletePaints, loading, error } = useData();
     const defaultPaint: Omit<Paint, 'id'> = {
         name: '',
         paintType: 'Base',
@@ -99,6 +99,11 @@ const PaintsPage: React.FC = () => {
     const [typeFilter, setTypeFilter] = useState('');
     const [colorSchemeFilter, setColorSchemeFilter] = useState('');
     const [sortOption, setSortOption] = useState<string>('name-asc');
+    
+    // State for bulk actions
+    const [isBulkEditMode, setIsBulkEditMode] = useState(false);
+    const [selectedPaintIds, setSelectedPaintIds] = useState<string[]>([]);
+    const [bulkStockValue, setBulkStockValue] = useState<number>(1);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -117,6 +122,44 @@ const PaintsPage: React.FC = () => {
     const handleDeletePaint = (paint: Paint) => {
         if (window.confirm(`Are you sure you want to delete "${paint.name}"?`)) {
             deletePaint(paint.id);
+        }
+    };
+
+    // --- Bulk Action Handlers ---
+    const toggleBulkEditMode = () => {
+        setIsBulkEditMode(prev => !prev);
+        setSelectedPaintIds([]);
+    };
+
+    const handleSelectPaint = (paintId: string) => {
+        setSelectedPaintIds(prev =>
+            prev.includes(paintId)
+                ? prev.filter(id => id !== paintId)
+                : [...prev, paintId]
+        );
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedPaintIds(sortedAndFilteredPaints.map(p => p.id));
+        } else {
+            setSelectedPaintIds([]);
+        }
+    };
+
+    const handleBulkUpdateStock = async () => {
+        if (bulkStockValue < 0) {
+            alert("Stock cannot be negative.");
+            return;
+        }
+        await bulkUpdatePaints(selectedPaintIds, { stock: bulkStockValue });
+        toggleBulkEditMode();
+    };
+
+    const handleBulkDelete = async () => {
+        if (window.confirm(`Are you sure you want to delete ${selectedPaintIds.length} paints?`)) {
+            await bulkDeletePaints(selectedPaintIds);
+            toggleBulkEditMode();
         }
     };
 
@@ -167,8 +210,16 @@ const PaintsPage: React.FC = () => {
     if (error) return <div className="flex justify-center items-center h-full"><p className="text-red-500">{error}</p></div>;
 
     return (
-        <div className="container mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-6">Paint Collection</h1>
+        <div className="container mx-auto pb-20">
+            <header className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h1 className="text-3xl font-bold text-white">Paint Collection</h1>
+                <button
+                    onClick={toggleBulkEditMode}
+                    className={`px-4 py-2 font-semibold rounded-lg shadow-md transition duration-300 ${isBulkEditMode ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-surface hover:bg-gray-700 text-text-primary border border-border'}`}
+                >
+                    {isBulkEditMode ? 'Cancel Bulk Edit' : 'Bulk Edit Stock'}
+                </button>
+            </header>
             
             {/* Add Paint Form Card */}
             <div className="bg-surface p-6 rounded-lg shadow-md border border-border mb-8">
@@ -237,6 +288,16 @@ const PaintsPage: React.FC = () => {
                     <table className="w-full text-left">
                         <thead className="border-b border-border">
                             <tr>
+                                {isBulkEditMode && (
+                                    <th className="p-4 w-12">
+                                        <input
+                                            type="checkbox"
+                                            className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary bg-surface"
+                                            onChange={handleSelectAll}
+                                            checked={sortedAndFilteredPaints.length > 0 && selectedPaintIds.length === sortedAndFilteredPaints.length}
+                                        />
+                                    </th>
+                                )}
                                 <th className="p-4">Color</th>
                                 <th className="p-4">Name</th>
                                 <th className="p-4 hidden sm:table-cell">Manufacturer</th>
@@ -248,7 +309,17 @@ const PaintsPage: React.FC = () => {
                         </thead>
                         <tbody>
                             {sortedAndFilteredPaints.map(paint => (
-                                <tr key={paint.id} className="border-b border-border last:border-b-0 hover:bg-background">
+                                <tr key={paint.id} className={`border-b border-border last:border-b-0 hover:bg-background ${isBulkEditMode ? 'cursor-pointer' : ''}`} onClick={() => isBulkEditMode && handleSelectPaint(paint.id)}>
+                                    {isBulkEditMode && (
+                                        <td className="p-4">
+                                             <input
+                                                type="checkbox"
+                                                className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary bg-surface pointer-events-none"
+                                                checked={selectedPaintIds.includes(paint.id)}
+                                                readOnly
+                                            />
+                                        </td>
+                                    )}
                                     <td className="p-4">
                                         <div className="w-8 h-8 rounded-full border-2 border-background" style={{ backgroundColor: paint.rgbCode || '#888' }} title={paint.rgbCode}></div>
                                     </td>
@@ -259,8 +330,8 @@ const PaintsPage: React.FC = () => {
                                     <td className="p-4 font-semibold">{paint.stock}</td>
                                     <td className="p-4">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => setEditingPaint(paint)} className="text-blue-400 hover:text-blue-300"><PencilIcon /></button>
-                                            <button onClick={() => handleDeletePaint(paint)} className="text-red-400 hover:text-red-300"><TrashIcon /></button>
+                                            <button disabled={isBulkEditMode} onClick={() => setEditingPaint(paint)} className="text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"><PencilIcon /></button>
+                                            <button disabled={isBulkEditMode} onClick={() => handleDeletePaint(paint)} className="text-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"><TrashIcon /></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -274,6 +345,26 @@ const PaintsPage: React.FC = () => {
                     </div>
                 )}
             </div>
+            
+            {/* Bulk Actions Toolbar */}
+            {isBulkEditMode && selectedPaintIds.length > 0 && (
+                <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-surface border-t border-border p-3 shadow-lg z-40 flex items-center justify-between gap-4 flex-wrap">
+                    <span className="font-semibold">{selectedPaintIds.length} selected</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <label htmlFor="bulkStock" className="text-sm font-medium">Set Stock to:</label>
+                        <input
+                            type="number"
+                            id="bulkStock"
+                            min="0"
+                            value={bulkStockValue}
+                            onChange={(e) => setBulkStockValue(parseInt(e.target.value, 10) || 0)}
+                            className="bg-background border border-border rounded-md px-2 py-1.5 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                        <button onClick={handleBulkUpdateStock} className="px-3 py-1.5 text-sm bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">Apply Stock</button>
+                        <button onClick={handleBulkDelete} className="px-3 py-1.5 text-sm bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Delete</button>
+                    </div>
+                </div>
+            )}
 
             {editingPaint && (
                 <PaintEditModal

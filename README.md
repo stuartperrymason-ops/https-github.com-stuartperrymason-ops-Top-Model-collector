@@ -12,8 +12,9 @@ Welcome to ModelForge, your digital armory for managing tabletop miniatures. Thi
 - **Detailed Collection View**: Browse your entire collection with images, descriptions, and current painting status.
 - **Progress Dashboard**: Visualize your hobby progress with filterable charts breaking down the status of your models by army and game system.
 - **Painting Session Calendar**: Schedule your hobby time, link models to sessions, and keep track of your painting commitments.
+- **Paint Collection Management**: Keep a detailed inventory of your hobby paints, including stock levels.
 - **Dynamic Theming**: Customize the look and feel of your collection by assigning unique color schemes to each game system.
-- **Bulk Data Management**: Easily import your existing collection from a CSV file.
+- **Bulk Data Management**: Easily import your existing collection of models or paints from a CSV file, and bulk-edit paint stock levels.
 - **Customizable Settings**: Manage the game systems (including color themes) and armies that make up your collection.
 - **AI-Powered Descriptions**: Use the Gemini API to automatically generate rich, flavorful descriptions for your models.
 
@@ -81,57 +82,69 @@ sequenceDiagram
 
 ### 3. Bulk CSV Import Flow
 
-This flowchart illustrates the logic behind the CSV import feature. New game systems found in the file are created with a default color scheme. The process includes a review step for the user to handle potential duplicates and errors.
+This flowchart illustrates the logic for importing either models or paints from a CSV file. The process includes validation and a user review step.
 
 ```mermaid
 graph TD
     A[Start] --> B{User selects CSV file};
-    B --> C[Parse CSV using PapaParse];
-    C --> D{Validate each row <br>(check for errors, find duplicates)};
+    B --> B1{Choose Import Type};
+    B1 -- Models --> C[Parse Model CSV];
+    B1 -- Paints --> C2[Parse Paint CSV];
+    C --> D{Validate each model row};
+    C2 --> D2{Validate each paint row};
     D --> E{Any new items, duplicates, or errors?};
-    E -- No --> F[Finalize Import];
-    E -- Yes --> G[Show Review Modal];
-    G --> H{User confirms choices & clicks "Confirm"};
+    D2 --> E2{Any duplicates or errors?};
+    E -- No --> F[Finalize Model Import];
+    E -- Yes --> G[Show Model Review Modal];
+    E2 -- No --> F2[Finalize Paint Import];
+    E2 -- Yes --> G2[Show Paint Review Modal];
+    G --> H{User confirms choices};
+    G2 --> H2{User confirms choices};
     H --> F;
-    F --> I[1. Create new Game Systems in DB <br>(with default color scheme)];
-    I --> J[2. Create new Armies in DB];
-    J --> K[3. Prepare final model list <br>(resolve names to new IDs)];
-    K --> L[4. Call `bulkAddModels` to save to DB];
-    L --> M[Show Import Summary Modal];
+    H2 --> F2;
+    F --> I[1. Create new Game Systems & Armies];
+    I --> K[2. Prepare final model list];
+    K --> L[3. Call `bulkAddModels`];
+    L --> M[Show Model Import Summary];
+    F2 --> L2[Call `bulkAddPaints`];
+    L2 --> M2[Show Paint Import Summary];
     M --> N[End];
+    M2 --> N;
 
     style G fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
+    style G2 fill:#ffafcc,stroke:#2b2d42,stroke-width:2px
     style M fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
+    style M2 fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
 ```
 
-### 4. User Interaction: Editing a Game System
+### 4. User Interaction: Bulk Updating Paint Stock
 
-This sequence diagram illustrates how a user edits a game system, including changing its custom color scheme. The changes are saved to the database and reflected immediately in the UI.
+This diagram shows the process of a user entering bulk edit mode on the Paints page to update the stock levels for multiple items at once.
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant SettingsPage
-    participant GameSystemEditModal
+    participant PaintsPage
     participant DataContext
     participant apiService
     participant Server
     participant Database
 
-    User->>SettingsPage: Clicks "Edit" on a Game System
-    SettingsPage->>GameSystemEditModal: Opens modal with system data
-    User->>GameSystemEditModal: Changes name and/or colors
-    User->>GameSystemEditModal: Clicks "Save Changes"
-    GameSystemEditModal->>DataContext: Calls updateGameSystem(id, updates)
-    DataContext->>apiService: Calls updateGameSystem(id, updates)
-    apiService->>Server: PUT /api/game-systems/:id with new data
-    Server->>Database: Updates the system document
+    User->>PaintsPage: Clicks "Bulk Edit Stock"
+    PaintsPage->>PaintsPage: Enters bulk edit mode
+    User->>PaintsPage: Selects multiple paints via checkboxes
+    User->>PaintsPage: Enters new stock value in toolbar
+    User->>PaintsPage: Clicks "Apply Stock"
+    PaintsPage->>DataContext: Calls bulkUpdatePaints(ids, { stock: value })
+    DataContext->>apiService: Loops and calls updatePaint(id, { stock: value }) for each ID
+    apiService->>Server: PUT /api/paints/:id
+    Server->>Database: Updates paint document
     Database-->>Server: Returns updated document
-    Server-->>apiService: Returns updated system JSON
-    apiService-->>DataContext: Returns updated system
-    DataContext->>DataContext: Updates `gameSystems` state
-    DataContext-->>SettingsPage: Re-renders with updated system list
-    GameSystemEditModal->>SettingsPage: Closes modal (onClose)
+    Server-->>apiService: Returns updated paint JSON
+    apiService-->>DataContext: Returns updated paint
+    DataContext->>DataContext: Updates `paints` state with all updated paints
+    DataContext-->>PaintsPage: Re-renders with updated stock values
+    PaintsPage->>PaintsPage: Exits bulk edit mode
 ```
 
 ### 5. User Interaction: Scheduling a Painting Session

@@ -16,9 +16,9 @@ import { GoogleGenAI } from "@google/genai";
  */
 export const generateDescription = async (modelName: string, armyName: string, gameSystem: string): Promise<string> => {
   try {
-    // FIX: Per @google/genai coding guidelines, the API key must be sourced directly from process.env.API_KEY.
-    // The check for the key's existence has also been removed as per the guidelines,
-    // which state to assume the key is pre-configured and accessible.
+    // FIX: Per coding guidelines, use process.env.API_KEY to get the Gemini API key.
+    // The API key is sourced from an environment variable, assumed to be configured
+    // and accessible in the execution environment.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Construct a detailed prompt to guide the AI. This is a form of "prompt engineering"
