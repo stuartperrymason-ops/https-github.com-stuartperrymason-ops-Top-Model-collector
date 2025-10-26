@@ -37,19 +37,6 @@ const client = new MongoClient(MONGODB_URI, {
     deprecationErrors: true,
   }
 });
-async function run() {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
-  }
-}
-run().catch(console.dir);
 
 // Global variables to hold references to the database and collections once connected.
 let db;
@@ -594,7 +581,7 @@ async function startServer() {
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
         // 3. Set up database and collections
-        const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
+        const DB_NAME = process.env.DB_NAME || 'tabletop-collector';
         db = client.db(DB_NAME);
         gameSystemsCollection = db.collection('game_systems');
         armiesCollection = db.collection('armies');
@@ -624,7 +611,6 @@ async function startServer() {
         }
         process.exit(1); // Exit the process if DB connection fails.
     }
-    // IMPORTANT: Do NOT call client.close() here. The connection should stay open for the server's lifetime.
 }
 
 // Start the application.
