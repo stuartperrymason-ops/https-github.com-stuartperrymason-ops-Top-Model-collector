@@ -28,7 +28,6 @@ if (!process.env.MONGODB_URI && !process.env.DB_PASSWORD) {
     process.exit(1);
 }
 const MONGODB_URI = process.env.MONGODB_URI || `mongodb+srv://stuartperrymason_db_user:${process.env.DB_PASSWORD}@tabletop-collector.ol9gelx.mongodb.net/?appName=tabletop-collector`;
-const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
 
 // Initialize the MongoDB Client. There should only be one declaration of 'client'.
 const client = new MongoClient(MONGODB_URI, {
@@ -574,6 +573,7 @@ app.delete('/api/paints/:id', async (req, res) => {
  */
 async function startServer() {
     try {
+        const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
         await client.connect();
         console.log('Connected successfully to MongoDB');
         db = client.db(DB_NAME);
