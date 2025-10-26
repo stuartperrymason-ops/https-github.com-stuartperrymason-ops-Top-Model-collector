@@ -573,30 +573,46 @@ app.delete('/api/paints/:id', async (req, res) => {
  */
 async function startServer() {
     try {
-        const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
+        // 1. Connect the client to the server
         await client.connect();
-        console.log('Connected successfully to MongoDB');
+
+        // 2. Send a ping to confirm a successful connection
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+        // 3. Set up database and collections
+        const DB_NAME = process.env.DB_NAME || 'tabletop_collector';
         db = client.db(DB_NAME);
-        // Get references to our collections.
         gameSystemsCollection = db.collection('game_systems');
         armiesCollection = db.collection('armies');
         modelsCollection = db.collection('models');
         paintingSessionsCollection = db.collection('painting_sessions');
         paintsCollection = db.collection('paints');
 
-        // Seed the database with initial data if it's empty.
+        // 4. Seed the database (if needed)
         await seedDatabase();
 
-        // Start listening for incoming HTTP requests.
+        // 5. Start the Express server
         app.listen(PORT, () => {
             console.log(`Server running on http://localhost:${PORT}`);
         });
 
     } catch (e) {
-        console.error('Could not connect to MongoDB', e);
+        console.error("Could not connect to MongoDB and start server.", e);
+        // Add helpful error messages for common connection issues
+        if (e.constructor.name === 'MongoNetworkError' || (e.message && e.message.includes('SSL'))) {
+            console.error("\n--- MONGO CONNECTION FAILED ---");
+            console.error("This is likely a network issue. Please check the following:");
+            console.error("1. Your internet connection is active.");
+            console.error("2. Your current IP address is whitelisted in MongoDB Atlas.");
+            console.error("   (Go to Network Access -> Add IP Address -> 'Allow Access From Anywhere' for testing).");
+            console.error("3. The DB_PASSWORD in your .env file is correct and has no special characters that need encoding.");
+            console.error("----------------------------------\n");
+        }
         process.exit(1); // Exit the process if DB connection fails.
     }
+    // IMPORTANT: Do NOT call client.close() here. The connection should stay open for the server's lifetime.
 }
 
 // Start the application.
-startServer().catch(console.error);
+startServer();
