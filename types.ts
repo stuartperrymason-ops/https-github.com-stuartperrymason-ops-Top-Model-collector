@@ -57,7 +57,7 @@ export interface Paint {
   paintType: 'Base' | 'Layer' | 'Shade' | 'Contrast' | 'Technical' | 'Dry' | 'Air'; // The type of paint.
   manufacturer: string; // The company that produces the paint, e.g., "Citadel".
   colorScheme: string; // The general color family, e.g., "Blue", "Metallic".
-  rgbCode?: string; // Optional hex code for the color, e.g., "#0d4e8a".
+  rgbCode?: string; // Optional hex or RGB code for the color, e.g., "#0d4e8a" or "rgb(13, 78, 138)".
   stock: number; // The quantity of this paint the user owns.
 }
 

@@ -491,7 +491,7 @@ const BulkDataPage: React.FC = () => {
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">paintType</code>,
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">colorScheme</code>,
                         <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">stock</code>.
-                        Optional: <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">rgbCode</code>.
+                        Optional: <code className="bg-background text-primary p-1 rounded-md text-sm mx-1">rgbCode</code> (in #RRGGBB or rgb(r,g,b) format).
                     </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 items-center">

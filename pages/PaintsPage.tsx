@@ -9,6 +9,9 @@ import { useData } from '../context/DataContext';
 import { Paint } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon, XIcon } from '../components/icons/Icons';
 
+// Helper to check if a string is a valid 6-digit hex color code.
+const isValidHex = (color: string) => /^#[0-9a-f]{6}$/i.test(color);
+
 // A local modal component for editing a Paint.
 const PaintEditModal: React.FC<{
     paint: Paint;
@@ -67,10 +70,10 @@ const PaintEditModal: React.FC<{
                     </div>
                     <div className="flex items-end gap-2">
                          <div className="flex-grow">
-                            <label htmlFor="edit-rgbCode" className="block text-sm font-medium text-text-secondary mb-1">RGB Code</label>
-                            <input id="edit-rgbCode" name="rgbCode" type="text" value={formData.rgbCode || ''} onChange={handleChange} placeholder="#RRGGBB" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+                            <label htmlFor="edit-rgbCode" className="block text-sm font-medium text-text-secondary mb-1">Hex or RGB Code</label>
+                            <input id="edit-rgbCode" name="rgbCode" type="text" value={formData.rgbCode || ''} onChange={handleChange} placeholder="#RRGGBB or rgb(r,g,b)" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
                         </div>
-                        <input type="color" value={formData.rgbCode || '#ffffff'} onChange={(e) => handleChange({ ...e, target: { ...e.target, name: 'rgbCode' }})} className="h-10 w-12 p-1 bg-background border border-border rounded-md cursor-pointer"/>
+                        <input type="color" value={isValidHex(formData.rgbCode || '') ? formData.rgbCode! : '#ffffff'} onChange={(e) => handleChange({ ...e, target: { ...e.target, name: 'rgbCode', value: e.target.value }})} className="h-10 w-12 p-1 bg-background border border-border rounded-md cursor-pointer"/>
                     </div>
                     <div className="flex justify-end gap-4 mt-6">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700">Cancel</button>
@@ -236,10 +239,10 @@ const PaintsPage: React.FC = () => {
                     </div>
                     <div className="flex items-end gap-4">
                         <div className="flex-grow max-w-xs">
-                             <label htmlFor="rgbCode" className="block text-sm font-medium text-text-secondary mb-1">RGB Hex Code (optional)</label>
-                             <input id="rgbCode" name="rgbCode" type="text" value={newPaint.rgbCode} onChange={handleInputChange} placeholder="#RRGGBB" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+                             <label htmlFor="rgbCode" className="block text-sm font-medium text-text-secondary mb-1">Hex or RGB Code (optional)</label>
+                             <input id="rgbCode" name="rgbCode" type="text" value={newPaint.rgbCode} onChange={handleInputChange} placeholder="#RRGGBB or rgb(r,g,b)" className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
                         </div>
-                        <input type="color" value={newPaint.rgbCode || '#ffffff'} onChange={(e) => handleInputChange({ ...e, target: { ...e.target, name: 'rgbCode' }})} className="h-10 w-12 p-1 bg-background border border-border rounded-md cursor-pointer"/>
+                        <input type="color" value={isValidHex(newPaint.rgbCode || '') ? newPaint.rgbCode! : '#ffffff'} onChange={(e) => handleInputChange({ ...e, target: { ...e.target, name: 'rgbCode', value: e.target.value }})} className="h-10 w-12 p-1 bg-background border border-border rounded-md cursor-pointer"/>
                         <button type="submit" className="flex-grow md:flex-grow-0 flex items-center justify-center gap-2 px-6 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:opacity-80 transition-opacity">
                             <PlusIcon /> Add Paint
                         </button>

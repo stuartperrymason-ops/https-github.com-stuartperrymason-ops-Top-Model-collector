@@ -12,9 +12,9 @@ Welcome to ModelForge, your digital armory for managing tabletop miniatures. Thi
 - **Detailed Collection View**: Browse your entire collection with images, descriptions, and current painting status.
 - **Progress Dashboard**: Visualize your hobby progress with filterable charts breaking down the status of your models by army and game system.
 - **Painting Session Calendar**: Schedule your hobby time, link models to sessions, and keep track of your painting commitments.
-- **Paint Collection Management**: Keep a detailed inventory of your hobby paints, including stock levels.
+- **Paint Collection Management**: Keep a detailed inventory of your hobby paints, including stock levels and color codes (hex or RGB). Features bulk-editing of stock levels.
 - **Dynamic Theming**: Customize the look and feel of your collection by assigning unique color schemes to each game system.
-- **Bulk Data Management**: Easily import your existing collection of models or paints from a CSV file, and bulk-edit paint stock levels.
+- **Bulk Data Management**: Easily import your existing collection of models or paints from a CSV file.
 - **Customizable Settings**: Manage the game systems (including color themes) and armies that make up your collection.
 - **AI-Powered Descriptions**: Use the Gemini API to automatically generate rich, flavorful descriptions for your models.
 

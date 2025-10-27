@@ -62,12 +62,16 @@ const DashboardPage: React.FC = () => {
         if (filteredModels.length === 0) return [];
         
         // Step 1: Count the number of models for each status using `reduce`.
+        // The accumulator is explicitly typed as Record<string, number> and initialized with an empty object
+        // to ensure type safety and correct behavior when incrementing counts.
+        // FIX: The type of the `reduce` initial value must be explicitly set to ensure
+        // the result (`counts`) is correctly inferred as `Record<string, number>`.
+        // Without this, TypeScript infers `counts` as `{}`, causing `count` to be `unknown` and breaking the percentage calculation.
         const counts = filteredModels.reduce((acc, model) => {
-            // FIX: Refactor to prevent TypeScript error.
-            const currentCount = acc[model.status] || 0;
-            acc[model.status] = currentCount + 1;
+            const status = model.status;
+            acc[status] = (acc[status] || 0) + 1;
             return acc;
-        }, {} as { [key in Model['status']]: number });
+        }, {} as Record<string, number>);
         
         // Step 2: Map the counts to a more usable format for rendering, including percentages and style info.
         return Object.entries(counts)
