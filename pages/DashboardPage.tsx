@@ -27,7 +27,7 @@ const readyStatuses: Model['status'][] = ['Ready to Game', 'Based', 'Painted'];
 
 const DashboardPage: React.FC = () => {
     // Fetch all necessary data from the global context.
-    const { models, gameSystems, armies, loading, error } = useData();
+    const { models, gameSystems, armies, paints, minStockThreshold, loading, error } = useData();
     
     // State for filter controls.
     const [gameSystemFilter, setGameSystemFilter] = useState<string>('');
@@ -83,6 +83,14 @@ const DashboardPage: React.FC = () => {
 
     }, [filteredModels]);
     
+    // Memoize the calculation of paints that are at or below the minimum stock threshold.
+    const lowStockPaints = useMemo(() => {
+        if (minStockThreshold < 0) return []; // Should not happen, but defensive check
+        return paints
+            .filter(paint => paint.stock <= minStockThreshold)
+            .sort((a, b) => a.stock - b.stock); // Sort by stock, lowest first
+    }, [paints, minStockThreshold]);
+
     // Memoize the calculation of "Ready to Game" progress for each game system.
     // All calculations are based on the currently filtered models for a fully reactive dashboard.
     const gameSystemProgress = useMemo(() => {
@@ -171,6 +179,21 @@ const DashboardPage: React.FC = () => {
                 </button>
             </div>
 
+            {/* Low Stock Alerts Card */}
+            {lowStockPaints.length > 0 && (
+                <div className="mb-8 bg-yellow-900/50 border border-yellow-600 p-6 rounded-lg shadow-md">
+                    <h2 className="text-xl font-semibold text-yellow-300 mb-4">Low Stock Alerts</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {lowStockPaints.map(paint => (
+                            <div key={paint.id} className="bg-surface p-3 rounded-md">
+                                <p className="font-bold text-white truncate" title={paint.name}>{paint.name}</p>
+                                <p className="text-sm text-text-secondary">{paint.manufacturer}</p>
+                                <p className="text-lg font-bold text-red-500 mt-1">Stock: {paint.stock}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Conditionally render the dashboard content only if there are models to display. */}
             {models.length > 0 ? (

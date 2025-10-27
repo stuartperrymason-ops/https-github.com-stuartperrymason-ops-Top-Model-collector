@@ -86,7 +86,7 @@ const PaintEditModal: React.FC<{
 };
 
 const PaintsPage: React.FC = () => {
-    const { paints, addPaint, updatePaint, deletePaint, bulkUpdatePaints, bulkDeletePaints, loading, error } = useData();
+    const { paints, addPaint, updatePaint, deletePaint, bulkUpdatePaints, bulkDeletePaints, minStockThreshold, loading, error } = useData();
     const defaultPaint: Omit<Paint, 'id'> = {
         name: '',
         paintType: 'Base',
@@ -311,7 +311,9 @@ const PaintsPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {sortedAndFilteredPaints.map(paint => (
+                            {sortedAndFilteredPaints.map(paint => {
+                                const isLowStock = paint.stock <= minStockThreshold;
+                                return (
                                 <tr key={paint.id} className={`border-b border-border last:border-b-0 hover:bg-background ${isBulkEditMode ? 'cursor-pointer' : ''}`} onClick={() => isBulkEditMode && handleSelectPaint(paint.id)}>
                                     {isBulkEditMode && (
                                         <td className="p-4">
@@ -330,7 +332,9 @@ const PaintsPage: React.FC = () => {
                                     <td className="p-4 hidden sm:table-cell">{paint.manufacturer}</td>
                                     <td className="p-4 hidden md:table-cell">{paint.paintType}</td>
                                     <td className="p-4 hidden lg:table-cell">{paint.colorScheme}</td>
-                                    <td className="p-4 font-semibold">{paint.stock}</td>
+                                    <td className={`p-4 font-semibold ${isLowStock ? 'text-red-500' : ''}`} title={isLowStock ? `Stock is at or below threshold (${minStockThreshold})` : ''}>
+                                        {paint.stock}
+                                    </td>
                                     <td className="p-4">
                                         <div className="flex justify-end gap-2">
                                             <button disabled={isBulkEditMode} onClick={() => setEditingPaint(paint)} className="text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"><PencilIcon /></button>
@@ -338,7 +342,7 @@ const PaintsPage: React.FC = () => {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            )})}
                         </tbody>
                     </table>
                 </div>

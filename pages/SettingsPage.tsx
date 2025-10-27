@@ -4,7 +4,7 @@
  * This program was written by Stuart Mason October 2025.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { GameSystem, Army } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon, XIcon } from '../components/icons/Icons';
@@ -82,7 +82,8 @@ const SettingsPage: React.FC = () => {
     const { 
         gameSystems, armies, 
         addGameSystem, updateGameSystem, deleteGameSystem,
-        addArmy, updateArmy, deleteArmy 
+        addArmy, updateArmy, deleteArmy,
+        minStockThreshold, updateMinStockThreshold
     } = useData();
 
     // State for managing the "Add Game System" form input.
@@ -95,6 +96,12 @@ const SettingsPage: React.FC = () => {
     // State for managing the "Add Army" form inputs.
     const [newArmyName, setNewArmyName] = useState('');
     const [newArmySystemId, setNewArmySystemId] = useState('');
+    
+    // State for managing the stock threshold input.
+    const [localThreshold, setLocalThreshold] = useState(minStockThreshold);
+    useEffect(() => {
+        setLocalThreshold(minStockThreshold);
+    }, [minStockThreshold]);
 
     // State for the edit modal
     const [editingSystem, setEditingSystem] = useState<GameSystem | null>(null);
@@ -146,7 +153,12 @@ const SettingsPage: React.FC = () => {
             deleteArmy(army.id);
         }
     };
-
+    
+    // --- Event Handler for Inventory Settings ---
+    const handleThresholdSave = (e: React.FormEvent) => {
+        e.preventDefault();
+        updateMinStockThreshold(localThreshold);
+    };
 
     return (
         <div className="container mx-auto">
@@ -242,6 +254,31 @@ const SettingsPage: React.FC = () => {
                             </li>
                         ))}
                     </ul>
+                </div>
+                 {/* Inventory Settings Card */}
+                <div className="bg-surface p-6 rounded-lg shadow-md border border-border lg:col-span-2">
+                    <h2 className="text-2xl font-semibold text-white mb-4">Inventory Settings</h2>
+                    <form onSubmit={handleThresholdSave} className="space-y-3 max-w-sm">
+                        <div>
+                            <label htmlFor="min-stock" className="block text-sm font-medium text-text-secondary mb-1">
+                                Minimum Stock Threshold
+                            </label>
+                            <p className="text-xs text-text-secondary mb-2">
+                                Get alerts when paint stock falls to this level or below.
+                            </p>
+                            <input
+                                id="min-stock"
+                                type="number"
+                                min="0"
+                                value={localThreshold}
+                                onChange={(e) => setLocalThreshold(parseInt(e.target.value, 10) || 0)}
+                                className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                        <button type="submit" className="w-full px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:opacity-80 transition-opacity">
+                            Save Threshold
+                        </button>
+                    </form>
                 </div>
             </div>
             {editingSystem && (

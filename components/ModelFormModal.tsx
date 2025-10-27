@@ -182,8 +182,9 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
   // --- Paint Recipe Handlers ---
   const groupedPaints = useMemo(() => {
     // FIX: The original `reduce` had a typing issue where the accumulator `acc` was not correctly
-    // inferred. By explicitly providing the generic type to `reduce`, we ensure
-    // TypeScript correctly types the accumulator, preventing `paintsList` from being `unknown` later on.
+    // inferred. By explicitly providing the generic type `Record<string, Paint[]>` to `reduce`, we ensure
+    // TypeScript correctly types the accumulator. This allows `paintsList` to be correctly inferred
+    // as `Paint[]` later, which has the `.map` method, resolving the error.
     return paints.reduce<Record<string, Paint[]>>((acc, paint) => {
         (acc[paint.manufacturer] = acc[paint.manufacturer] || []).push(paint);
         return acc;

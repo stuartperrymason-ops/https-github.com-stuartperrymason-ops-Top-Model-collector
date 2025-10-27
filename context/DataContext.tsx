@@ -21,9 +21,11 @@ interface DataContextState {
   loading: boolean; // Indicates if initial data is being fetched.
   error: string | null; // Stores any critical error messages.
   toasts: ToastMessage[]; // An array of active toast notifications.
+  minStockThreshold: number; // Minimum stock level before a paint is considered "low".
   
   // Functions to interact with the state
   addToast: (message: string, type: 'success' | 'error') => void;
+  updateMinStockThreshold: (threshold: number) => void;
   // Game System functions
   addGameSystem: (name: string, colorScheme: GameSystem['colorScheme']) => Promise<GameSystem | undefined>;
   updateGameSystem: (id: string, updates: Partial<Omit<GameSystem, 'id'>>) => Promise<void>;
@@ -74,6 +76,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [minStockThreshold, setMinStockThreshold] = useState<number>(1);
 
   // Function to add a toast message to the queue.
   // It automatically removes the toast after a 5-second timeout.
@@ -84,6 +87,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       // Use a functional update to ensure we're filtering the latest state.
       setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
     }, 5000);
+  };
+  
+  // Function to update the minimum stock threshold and save it to localStorage.
+  const updateMinStockThreshold = (threshold: number) => {
+    const newThreshold = Math.max(0, threshold); // Ensure it's not negative.
+    setMinStockThreshold(newThreshold);
+    localStorage.setItem('minStockThreshold', newThreshold.toString());
+    addToast('Minimum stock threshold updated!', 'success');
   };
 
   // Memoized function to fetch all initial data from the API.
@@ -119,10 +130,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }, []); // Empty dependency array means this function is created only once.
 
   // The useEffect hook runs after the component mounts.
-  // It calls `fetchData` to load the application's initial state.
+  // It calls `fetchData` and loads settings from localStorage.
   useEffect(() => {
     fetchData();
-  }, [fetchData]); // The effect depends on `fetchData`.
+    const savedThreshold = localStorage.getItem('minStockThreshold');
+    if (savedThreshold) {
+      setMinStockThreshold(parseInt(savedThreshold, 10));
+    }
+  }, [fetchData]);
 
   // --- CRUD operations for Game Systems ---
   // Each function follows a similar pattern:
@@ -410,6 +425,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     loading,
     error,
     toasts,
+    minStockThreshold,
+    updateMinStockThreshold,
     addToast,
     addGameSystem,
     updateGameSystem,
