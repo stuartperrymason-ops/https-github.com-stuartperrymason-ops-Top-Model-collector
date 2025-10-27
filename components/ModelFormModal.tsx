@@ -7,10 +7,10 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Model } from '../types';
+import { Model, PaintRecipeStep } from '../types';
 import { useData, useForm } from '../context/DataContext';
 import { generateDescription } from '../services/geminiService';
-import { SparklesIcon, XIcon } from './icons/Icons';
+import { SparklesIcon, XIcon, PlusIcon, TrashIcon } from './icons/Icons';
 
 // Define the props that this component accepts.
 interface ModelFormModalProps {
@@ -21,7 +21,7 @@ interface ModelFormModalProps {
 
 const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model }) => {
   // Access global data and functions from the DataContext.
-  const { gameSystems, armies, models, addModel, updateModel } = useData();
+  const { gameSystems, armies, models, paints, addModel, updateModel } = useData();
   
   // State to track if the AI description is currently being generated.
   const [isGenerating, setIsGenerating] = useState(false);
@@ -38,6 +38,7 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     status: 'Purchased',
     imageUrl: '',
     paintingNotes: '',
+    paintRecipe: [],
   };
 
   // The submission callback function for the useForm hook.
@@ -84,7 +85,13 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
   useEffect(() => {
     if (model) {
       const { id, createdAt, lastUpdated, ...modelData } = model;
-      setFormData({ ...initialState, ...modelData, armyIds: model.armyIds || [], paintingNotes: model.paintingNotes || '' });
+      setFormData({ 
+        ...initialState, 
+        ...modelData, 
+        armyIds: model.armyIds || [], 
+        paintingNotes: model.paintingNotes || '',
+        paintRecipe: model.paintRecipe || []
+      });
       setImagePreview(model.imageUrl || null);
     } else {
       setFormData(initialState);
@@ -155,6 +162,30 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     }
   };
 
+  // --- Paint Recipe Handlers ---
+  const groupedPaints = useMemo(() => {
+    return paints.reduce((acc, paint) => {
+        (acc[paint.manufacturer] = acc[paint.manufacturer] || []).push(paint);
+        return acc;
+    }, {} as Record<string, typeof paints>);
+  }, [paints]);
+
+  const handleRecipeChange = (index: number, field: keyof PaintRecipeStep, value: string) => {
+    const updatedRecipe = [...(formData.paintRecipe || [])];
+    updatedRecipe[index] = { ...updatedRecipe[index], [field]: value };
+    setFormValue('paintRecipe', updatedRecipe);
+  };
+  
+  const addRecipeStep = () => {
+    const newStep: PaintRecipeStep = { paintId: '', usage: '' };
+    setFormValue('paintRecipe', [...(formData.paintRecipe || []), newStep]);
+  };
+  
+  const removeRecipeStep = (index: number) => {
+    const updatedRecipe = (formData.paintRecipe || []).filter((_, i) => i !== index);
+    setFormValue('paintRecipe', updatedRecipe);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -223,7 +254,42 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
           
           <div>
             <label htmlFor="paintingNotes" className="block text-sm font-medium text-text-secondary mb-1">Painting Notes</label>
-            <textarea name="paintingNotes" id="paintingNotes" value={formData.paintingNotes} onChange={handleChange} rows={3} placeholder="e.g., Base: Macragge Blue, Shade: Nuln Oil..." className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+            <textarea name="paintingNotes" id="paintingNotes" value={formData.paintingNotes} onChange={handleChange} rows={3} placeholder="e.g., General notes, techniques used..." className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+          </div>
+
+          {/* Paint Recipe Section */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">Paint Recipe</label>
+            <div className="space-y-3 bg-background p-3 rounded-md border border-border">
+              {(formData.paintRecipe || []).map((step, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <select 
+                    value={step.paintId}
+                    onChange={(e) => handleRecipeChange(index, 'paintId', e.target.value)}
+                    className="flex-grow bg-gray-800 border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="" disabled>Select a paint</option>
+                    {/* FIX: Renamed `paints` to `paintsList` to avoid shadowing the `paints` variable from context, which was causing a type inference issue. */}
+                    {Object.entries(groupedPaints).map(([manufacturer, paintsList]) => (
+                      <optgroup key={manufacturer} label={manufacturer}>
+                        {paintsList.map(paint => <option key={paint.id} value={paint.id}>{paint.name}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={step.usage}
+                    onChange={(e) => handleRecipeChange(index, 'usage', e.target.value)}
+                    placeholder="Usage (e.g., Armor Base)"
+                    className="flex-grow bg-gray-800 border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button type="button" onClick={() => removeRecipeStep(index)} className="p-2 text-red-400 hover:text-red-300"><TrashIcon /></button>
+                </div>
+              ))}
+              <button type="button" onClick={addRecipeStep} className="w-full flex items-center justify-center gap-2 text-sm px-4 py-2 mt-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors">
+                <PlusIcon /> Add Recipe Step
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

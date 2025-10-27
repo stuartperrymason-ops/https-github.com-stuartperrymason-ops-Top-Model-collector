@@ -19,7 +19,7 @@ interface ModelDetailModalProps {
 
 const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ isOpen, onClose, model }) => {
     // Access global data and functions from the context.
-    const { gameSystems, armies, updateModel, addToast } = useData();
+    const { gameSystems, armies, paints, updateModel, addToast } = useData();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // If the modal is not supposed to be open, render nothing.
@@ -161,6 +161,32 @@ const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ isOpen, onClose, mo
                             {model.description || 'No description provided.'}
                         </p>
                     </div>
+
+                    {model.paintRecipe && model.paintRecipe.length > 0 && (
+                        <div>
+                            <p className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Paint Recipe</p>
+                            <div className="bg-background p-4 rounded-md space-y-3">
+                                {model.paintRecipe.map((step, index) => {
+                                    const paint = paints.find(p => p.id === step.paintId);
+                                    return (
+                                        <div key={index} className="flex items-center gap-4 border-b border-border last:border-b-0 pb-2">
+                                            <div 
+                                                className="w-8 h-8 rounded-full border-2 border-surface flex-shrink-0"
+                                                style={{ backgroundColor: paint?.rgbCode || '#888' }}
+                                                title={paint?.rgbCode}
+                                            ></div>
+                                            <div className="flex-grow">
+                                                <p className="font-semibold text-text-primary">{paint?.name || 'Unknown Paint'}</p>
+                                                <p className="text-xs text-text-secondary">{paint?.manufacturer}</p>
+                                            </div>
+                                            <p className="text-sm text-text-secondary text-right flex-shrink-0">{step.usage}</p>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {model.paintingNotes && (
                          <div>
                             <p className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Painting Notes</p>

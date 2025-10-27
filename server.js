@@ -97,6 +97,7 @@ const seedDatabase = async () => {
                 status: 'Ready to Game',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Intercessor',
                 paintingNotes: 'Base: Macragge Blue\nShade: Nuln Oil\nHighlight: Calgar Blue',
+                paintRecipe: [],
                 createdAt: now,
                 lastUpdated: now,
             },
@@ -109,6 +110,7 @@ const seedDatabase = async () => {
                 status: 'Primed',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Ork+Boy',
                 paintingNotes: '',
+                paintRecipe: [],
                 createdAt: now,
                 lastUpdated: now,
             },
@@ -121,6 +123,7 @@ const seedDatabase = async () => {
                 status: 'Painted',
                 imageUrl: 'https://via.placeholder.com/300x200.png?text=Wolverine',
                 paintingNotes: 'Suit: Averland Sunset\nStripes: Abaddon Black\nClaws: Leadbelcher',
+                paintRecipe: [],
                 createdAt: now,
                 lastUpdated: now,
             }
@@ -343,12 +346,16 @@ app.get('/api/models', async (req, res) => {
     res.json(models.map(doc => ({
         ...fromMongo(doc), 
         gameSystemId: doc.gameSystemId.toHexString(),
-        armyIds: doc.armyIds.map(id => id.toHexString())
+        armyIds: doc.armyIds.map(id => id.toHexString()),
+        paintRecipe: (doc.paintRecipe || []).map(step => ({
+            ...step,
+            paintId: step.paintId.toHexString()
+        })),
     })));
 });
 
 app.post('/api/models', async (req, res) => {
-    const { name, armyIds, gameSystemId, description, quantity, status, imageUrl, paintingNotes } = req.body;
+    const { name, armyIds, gameSystemId, description, quantity, status, imageUrl, paintingNotes, paintRecipe } = req.body;
     const now = new Date().toISOString();
     // Convert incoming string IDs to ObjectIds before inserting into the database.
     const newModelData = {
@@ -360,6 +367,10 @@ app.post('/api/models', async (req, res) => {
         status,
         imageUrl,
         paintingNotes,
+        paintRecipe: (paintRecipe || []).map(step => ({
+            ...step,
+            paintId: toMongoId(step.paintId)
+        })),
         createdAt: now,
         lastUpdated: now,
     };
@@ -369,7 +380,11 @@ app.post('/api/models', async (req, res) => {
     res.status(201).json({
         ...fromMongo(newDoc),
         gameSystemId: newDoc.gameSystemId.toHexString(),
-        armyIds: newDoc.armyIds.map(id => id.toHexString())
+        armyIds: newDoc.armyIds.map(id => id.toHexString()),
+        paintRecipe: (newDoc.paintRecipe || []).map(step => ({
+            ...step,
+            paintId: step.paintId.toHexString()
+        })),
     });
 });
 
@@ -380,6 +395,12 @@ app.put('/api/models/:id', async (req, res) => {
     // Convert any ID strings in the update payload to ObjectIds.
     if(modelUpdates.gameSystemId) modelUpdates.gameSystemId = toMongoId(modelUpdates.gameSystemId);
     if(modelUpdates.armyIds) modelUpdates.armyIds = modelUpdates.armyIds.map(id => toMongoId(id));
+    if(modelUpdates.paintRecipe) {
+        modelUpdates.paintRecipe = modelUpdates.paintRecipe.map(step => ({
+            ...step,
+            paintId: toMongoId(step.paintId)
+        }));
+    }
     
     // The `id` property is not part of the MongoDB document, so remove it before updating.
     delete modelUpdates.id;
@@ -396,7 +417,11 @@ app.put('/api/models/:id', async (req, res) => {
     res.json({
         ...fromMongo(result),
         gameSystemId: result.gameSystemId.toHexString(),
-        armyIds: result.armyIds.map(id => id.toHexString())
+        armyIds: result.armyIds.map(id => id.toHexString()),
+        paintRecipe: (result.paintRecipe || []).map(step => ({
+            ...step,
+            paintId: step.paintId.toHexString()
+        })),
     });
 });
 

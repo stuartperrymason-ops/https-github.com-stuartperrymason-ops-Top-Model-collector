@@ -23,7 +23,7 @@ interface ModelCardProps {
 
 const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, onView, isBulkEditMode, isSelected, onSelect }) => {
   // Access global data and functions from the DataContext.
-  const { gameSystems, armies, deleteModel } = useData();
+  const { gameSystems, armies, paints, deleteModel } = useData();
 
   // Find the full game system object from its ID for display.
   const gameSystem = gameSystems.find(gs => gs.id === model.gameSystemId);
@@ -66,7 +66,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, onView, isBulkEdit
   return (
     // The main card container. Styling changes based on selection and hover state.
     <div 
-        className={`relative bg-surface rounded-lg shadow-lg overflow-hidden border transition-all duration-300 group ${
+        className={`relative bg-surface rounded-lg shadow-lg overflow-hidden border transition-all duration-300 group flex flex-col ${
             isSelected ? 'border-primary scale-105' : 'border-border'
         } ${isBulkEditMode ? 'cursor-pointer' : ''} hover:border-primary hover:scale-105`}
         onClick={handleCardClick}
@@ -99,7 +99,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, onView, isBulkEdit
             <span className="text-text-secondary">No Image</span>
         </div>
       )}
-      <div className="p-4">
+      <div className="p-4 flex-grow flex flex-col">
         <h3 className="text-xl font-bold text-white mb-2">{model.name}</h3>
         <p className="text-sm text-text-secondary mb-1">{armyNames || 'No Army Assigned'}</p>
         <p className="text-xs text-gray-400 mb-4">{gameSystem?.name || 'Unknown System'}</p>
@@ -112,7 +112,28 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, onView, isBulkEdit
         </div>
 
         {/* The description is given a fixed height and vertical scroll for long texts. */}
-        <p className="text-sm text-text-secondary mb-4 h-20 overflow-y-auto">{model.description}</p>
+        <p className="text-sm text-text-secondary mb-4 h-20 overflow-y-auto flex-grow">{model.description}</p>
+        
+        {/* Paint Recipe Swatches */}
+        {model.paintRecipe && model.paintRecipe.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2">
+            {model.paintRecipe.slice(0, 7).map((step, index) => {
+              const paint = paints.find(p => p.id === step.paintId);
+              if (!paint) return null;
+              return (
+                <div 
+                  key={index} 
+                  className="w-5 h-5 rounded-full border-2 border-background shadow-sm" 
+                  style={{ backgroundColor: paint.rgbCode || '#888' }} 
+                  title={`${paint.name} (${paint.manufacturer}) - ${step.usage}`}
+                ></div>
+              );
+            })}
+            {model.paintRecipe.length > 7 && (
+              <span className="text-xs text-text-secondary ml-1">+{model.paintRecipe.length - 7} more</span>
+            )}
+          </div>
+        )}
         
         {/* Action buttons for edit and delete. */}
         <div className="flex justify-end gap-2 mt-4 border-t border-border pt-3">

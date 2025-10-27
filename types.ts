@@ -24,6 +24,12 @@ export interface Army {
   gameSystemId: string; // A foreign key that links this army to a GameSystem.
 }
 
+// Represents a step in a model's painting recipe.
+export interface PaintRecipeStep {
+  paintId: string; // Foreign key linking to a Paint object.
+  usage: string;   // Description of how the paint is used, e.g., "Armor Basecoat".
+}
+
 // Represents a single miniature model in the user's collection.
 export interface Model {
   id: string; // Unique identifier for the model entry.
@@ -35,6 +41,7 @@ export interface Model {
   status: 'Purchased' | 'Printed' | 'Assembled' | 'Primed' | 'Painted' | 'Based' | 'Ready to Game'; // The current stage in the painting/hobby process.
   imageUrl?: string; // Optional URL or base64 data string for an image of the model.
   paintingNotes?: string; // Optional field for storing paint recipes, colors used, or other hobby notes.
+  paintRecipe?: PaintRecipeStep[]; // An array of steps defining the paint recipe.
   createdAt: string; // ISO 8601 date string of when the model was created.
   lastUpdated: string; // ISO 8601 date string of when the model was last updated.
 }
