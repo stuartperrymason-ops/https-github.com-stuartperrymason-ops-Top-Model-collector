@@ -87,7 +87,8 @@ const PaintingSessionFormModal: React.FC<PaintingSessionFormModalProps> = ({
   }, [sessionToEdit, selectedDate, isOpen, setFormData]);
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
+    // FIX: Explicitly type `option` to resolve error where it was inferred as `unknown`.
+    const selectedIds = Array.from(e.target.selectedOptions, (option: HTMLOptionElement) => option.value);
     setFormValue('modelIds', selectedIds);
   };
 

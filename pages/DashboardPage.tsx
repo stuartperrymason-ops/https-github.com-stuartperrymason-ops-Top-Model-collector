@@ -63,7 +63,9 @@ const DashboardPage: React.FC = () => {
         
         // Step 1: Count the number of models for each status using `reduce`.
         const counts = filteredModels.reduce((acc, model) => {
-            acc[model.status] = (acc[model.status] || 0) + 1;
+            // FIX: Refactor to prevent TypeScript error.
+            const currentCount = acc[model.status] || 0;
+            acc[model.status] = currentCount + 1;
             return acc;
         }, {} as { [key in Model['status']]: number });
         
