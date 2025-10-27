@@ -4,7 +4,7 @@
   "description": "An application to store and manage information about models from various armies and tabletop gaming systems. Features include a detailed collection view, bulk CSV import/export, and settings to customize game systems and armies.",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"node server.js\" \"vite\"",
+    "dev": "concurrently \"node server.js\" \"node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js\"",
     "start": "node server.js",
     "build": "tsc && vite build",
     "preview": "vite preview"
