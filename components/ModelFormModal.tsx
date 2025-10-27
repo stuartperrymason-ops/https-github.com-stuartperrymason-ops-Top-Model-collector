@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Model, PaintRecipeStep } from '../types';
+import { Model, PaintRecipeStep, Paint } from '../types';
 import { useData, useForm } from '../context/DataContext';
 import { generateDescription } from '../services/geminiService';
 import { SparklesIcon, XIcon, PlusIcon, TrashIcon } from './icons/Icons';
@@ -75,7 +75,6 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
   const {
     values: formData,
     setValues: setFormData,
-    handleChange,
     setFormValue,
     handleSubmit,
     isSubmitting,
@@ -99,16 +98,34 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
     }
   }, [model, isOpen, setFormData]);
 
+  // FIX: Implement a custom change handler to properly manage state when the game system is changed.
+  // This prevents the user's army selections from being cleared on initial form load for an existing model.
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const processedValue = (e.target as HTMLInputElement).type === 'number' ? parseInt(value, 10) || 0 : value;
+
+    if (name === 'gameSystemId') {
+      // When the user manually changes the game system, also clear the selected armies.
+      // This prevents having armies selected that don't belong to the new system.
+      setFormData(prev => ({ ...prev, [name]: value, armyIds: [] }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: processedValue }));
+    }
+  };
+
   const availableArmies = useMemo(() => {
     if (!formData.gameSystemId) return [];
     return armies.filter(army => army.gameSystemId === formData.gameSystemId);
   }, [armies, formData.gameSystemId]);
   
+  // This problematic effect was removed. Its logic is now correctly handled in the custom `handleChange` function.
+  /*
   useEffect(() => {
     if (formData.gameSystemId) {
         setFormValue('armyIds', []);
     }
   }, [formData.gameSystemId, setFormValue]);
+  */
 
   // Handler for the army checkboxes, using setFormValue from the hook.
   const handleArmyChange = (armyId: string) => {
@@ -164,10 +181,13 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
 
   // --- Paint Recipe Handlers ---
   const groupedPaints = useMemo(() => {
+    // FIX: The original `reduce` had a typing issue where the accumulator `acc` was not correctly
+    // inferred, causing `paintsList` to be of type `unknown` later on.
+    // By explicitly casting the initial value `{}`, we ensure TypeScript understands the shape of `acc`.
     return paints.reduce((acc, paint) => {
         (acc[paint.manufacturer] = acc[paint.manufacturer] || []).push(paint);
         return acc;
-    }, {} as Record<string, typeof paints>);
+    }, {} as Record<string, Paint[]>);
   }, [paints]);
 
   const handleRecipeChange = (index: number, field: keyof PaintRecipeStep, value: string) => {
@@ -269,7 +289,6 @@ const ModelFormModal: React.FC<ModelFormModalProps> = ({ isOpen, onClose, model 
                     className="flex-grow bg-gray-800 border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="" disabled>Select a paint</option>
-                    {/* FIX: Renamed `paints` to `paintsList` to avoid shadowing the `paints` variable from context, which was causing a type inference issue. */}
                     {Object.entries(groupedPaints).map(([manufacturer, paintsList]) => (
                       <optgroup key={manufacturer} label={manufacturer}>
                         {paintsList.map(paint => <option key={paint.id} value={paint.id}>{paint.name}</option>)}
