@@ -355,74 +355,108 @@ app.get('/api/models', async (req, res) => {
 });
 
 app.post('/api/models', async (req, res) => {
-    const { name, armyIds, gameSystemId, description, quantity, status, imageUrl, paintingNotes, paintRecipe } = req.body;
-    const now = new Date().toISOString();
-    // Convert incoming string IDs to ObjectIds before inserting into the database.
-    const newModelData = {
-        name,
-        armyIds: armyIds.map(id => toMongoId(id)),
-        gameSystemId: toMongoId(gameSystemId),
-        description,
-        quantity,
-        status,
-        imageUrl,
-        paintingNotes,
-        paintRecipe: (paintRecipe || []).map(step => ({
-            ...step,
-            paintId: toMongoId(step.paintId)
-        })),
-        createdAt: now,
-        lastUpdated: now,
-    };
-    const result = await modelsCollection.insertOne(newModelData);
-    const newDoc = await modelsCollection.findOne({_id: result.insertedId});
-    // Convert the newly created document back to the client-friendly format.
-    res.status(201).json({
-        ...fromMongo(newDoc),
-        gameSystemId: newDoc.gameSystemId.toHexString(),
-        armyIds: newDoc.armyIds.map(id => id.toHexString()),
-        paintRecipe: (newDoc.paintRecipe || []).map(step => ({
-            ...step,
-            paintId: step.paintId.toHexString()
-        })),
-    });
+    try {
+        const { name, armyIds, gameSystemId, description, quantity, status, imageUrl, paintingNotes, paintRecipe } = req.body;
+        const now = new Date().toISOString();
+        
+        // FIX: Filter out incomplete recipe steps before attempting to convert IDs.
+        const processedRecipe = (paintRecipe || [])
+            .filter(step => step.paintId && ObjectId.isValid(step.paintId))
+            .map(step => ({
+                ...step,
+                paintId: toMongoId(step.paintId)
+            }));
+            
+        // Convert incoming string IDs to ObjectIds before inserting into the database.
+        const newModelData = {
+            name,
+            armyIds: armyIds.map(id => toMongoId(id)),
+            gameSystemId: toMongoId(gameSystemId),
+            description,
+            quantity,
+            status,
+            imageUrl,
+            paintingNotes,
+            paintRecipe: processedRecipe,
+            createdAt: now,
+            lastUpdated: now,
+        };
+        const result = await modelsCollection.insertOne(newModelData);
+        const newDoc = await modelsCollection.findOne({_id: result.insertedId});
+        // Convert the newly created document back to the client-friendly format.
+        res.status(201).json({
+            ...fromMongo(newDoc),
+            gameSystemId: newDoc.gameSystemId.toHexString(),
+            armyIds: newDoc.armyIds.map(id => id.toHexString()),
+            paintRecipe: (newDoc.paintRecipe || []).map(step => ({
+                ...step,
+                paintId: step.paintId.toHexString()
+            })),
+        });
+    } catch (error) {
+        // Gracefully handle errors, such as invalid ObjectId formats.
+        if (error.name === 'BSONError') {
+             return res.status(400).json({ message: 'Invalid ID format provided.' });
+        }
+        console.error('Error adding model:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 app.put('/api/models/:id', async (req, res) => {
-    const { id } = req.params;
-    const modelUpdates = req.body;
-    
-    // Convert any ID strings in the update payload to ObjectIds.
-    if(modelUpdates.gameSystemId) modelUpdates.gameSystemId = toMongoId(modelUpdates.gameSystemId);
-    if(modelUpdates.armyIds) modelUpdates.armyIds = modelUpdates.armyIds.map(id => toMongoId(id));
-    if(modelUpdates.paintRecipe) {
-        modelUpdates.paintRecipe = modelUpdates.paintRecipe.map(step => ({
-            ...step,
-            paintId: toMongoId(step.paintId)
-        }));
+    try {
+        const { id } = req.params;
+        const modelUpdates = req.body;
+        
+        // Convert any ID strings in the update payload to ObjectIds.
+        if(modelUpdates.gameSystemId) modelUpdates.gameSystemId = toMongoId(modelUpdates.gameSystemId);
+        if(modelUpdates.armyIds) modelUpdates.armyIds = modelUpdates.armyIds.map(id => toMongoId(id));
+        
+        // FIX: Filter out incomplete recipe steps before attempting to convert IDs.
+        // This prevents server errors when a user adds a recipe step but doesn't select a paint.
+        if (modelUpdates.paintRecipe) {
+            modelUpdates.paintRecipe = modelUpdates.paintRecipe
+                .filter(step => step.paintId && ObjectId.isValid(step.paintId))
+                .map(step => ({
+                    ...step,
+                    paintId: toMongoId(step.paintId)
+                }));
+        }
+        
+        // The `id` property is not part of the MongoDB document, so remove it before updating.
+        delete modelUpdates.id;
+
+        // Automatically set the lastUpdated timestamp on every update.
+        modelUpdates.lastUpdated = new Date().toISOString();
+
+        const result = await modelsCollection.findOneAndUpdate(
+            { _id: toMongoId(id) }, 
+            { $set: modelUpdates },
+            { returnDocument: 'after' }
+        );
+
+        if (!result) {
+            return res.status(404).json({ message: "Model not found" });
+        }
+
+        // Convert the updated document back to the client-friendly format.
+        res.json({
+            ...fromMongo(result),
+            gameSystemId: result.gameSystemId.toHexString(),
+            armyIds: result.armyIds.map(id => id.toHexString()),
+            paintRecipe: (result.paintRecipe || []).map(step => ({
+                ...step,
+                paintId: step.paintId.toHexString()
+            })),
+        });
+    } catch (error) {
+        // Gracefully handle errors, such as invalid ObjectId formats.
+        if (error.name === 'BSONError') {
+             return res.status(400).json({ message: 'Invalid ID format provided.' });
+        }
+        console.error('Error updating model:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
-    
-    // The `id` property is not part of the MongoDB document, so remove it before updating.
-    delete modelUpdates.id;
-
-    // Automatically set the lastUpdated timestamp on every update.
-    modelUpdates.lastUpdated = new Date().toISOString();
-
-    const result = await modelsCollection.findOneAndUpdate(
-        { _id: toMongoId(id) }, 
-        { $set: modelUpdates },
-        { returnDocument: 'after' }
-    );
-    // Convert the updated document back to the client-friendly format.
-    res.json({
-        ...fromMongo(result),
-        gameSystemId: result.gameSystemId.toHexString(),
-        armyIds: result.armyIds.map(id => id.toHexString()),
-        paintRecipe: (result.paintRecipe || []).map(step => ({
-            ...step,
-            paintId: step.paintId.toHexString()
-        })),
-    });
 });
 
 app.delete('/api/models/:id', async (req, res) => {
