@@ -61,7 +61,7 @@ export interface PaintingSession {
 export interface Paint {
   id: string; // Unique identifier.
   name: string; // The name of the paint, e.g., "Macragge Blue".
-  paintType: 'Base' | 'Layer' | 'Shade' | 'Contrast' | 'Technical' | 'Dry' | 'Air'; // The type of paint.
+  paintType: 'Base' | 'Layer' | 'Shade' | 'Contrast' | 'Technical' | 'Dry' | 'Air' | 'Metallic'; // The type of paint.
   manufacturer: string; // The company that produces the paint, e.g., "Citadel".
   colorScheme: string; // The general color family, e.g., "Blue", "Metallic".
   rgbCode?: string; // Optional hex or RGB code for the color, e.g., "#0d4e8a" or "rgb(13, 78, 138)".
