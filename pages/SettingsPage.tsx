@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { GameSystem, Army } from '../types';
-import { PlusIcon, PencilIcon, TrashIcon, XIcon, ExclamationTriangleIcon } from '../components/icons/Icons';
+import { PlusIcon, PencilIcon, TrashIcon, XIcon } from '../components/icons/Icons';
 
 // A local modal component for editing a Game System.
 // This keeps the logic self-contained within the SettingsPage.
