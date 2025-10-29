@@ -4,17 +4,13 @@
   "description": "An application to store and manage information about models from various armies and tabletop gaming systems. Features include a detailed collection view, bulk CSV import/export, and settings to customize game systems and armies.",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"node server.js\" \"node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js\"",
-    "start": "node server.js",
+    "dev": "vite",
+    "start": "vite preview",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@google/genai": "^1.25.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "mongodb": "^6.5.0",
     "papaparse": "^5.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -25,8 +21,7 @@
     "@types/react": "^18.2.61",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
-    "concurrently": "^8.2.2",
     "typescript": "^5.3.3",
-    "vite": "^5.1.4"
+    "vite": "^6.4.1"
   }
 }

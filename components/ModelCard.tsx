@@ -28,7 +28,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model, onEdit, onView, isBulkEdit
   // Find the full game system object from its ID for display.
   const gameSystem = gameSystems.find(gs => gs.id === model.gameSystemId);
   // Find all associated army objects and join their names for display.
-  const associatedArmies = armies.filter(a => model.armyIds.includes(a.id));
+  const associatedArmies = armies.filter(a => model.armyIds.includes(a.id) && a.gameSystemId === model.gameSystemId);
   const armyNames = associatedArmies.map(a => a.name).join(', ');
 
   // Handler for the delete button. Shows a confirmation dialog before proceeding.

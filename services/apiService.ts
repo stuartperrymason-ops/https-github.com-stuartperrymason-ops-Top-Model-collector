@@ -1,68 +1,32 @@
 /**
  * @file apiService.ts
- * @description This service provides functions for interacting with the backend API.
- * It encapsulates all HTTP requests (using `fetch`) for CRUD operations on game systems, armies, and models.
- * Centralizing API calls here makes the components cleaner and the codebase easier to maintain.
- * This program was written by Stuart Mason October 2025.
+ * @description This service provides functions for interacting with the local database.
+ * It encapsulates all calls for CRUD operations on game systems, armies, and models.
  */
 
 import { GameSystem, Army, Model, PaintingSession, Paint } from '../types';
-
-// The base URL for the backend API. It uses an environment variable for production/staging
-// and falls back to the local server URL for development.
-// Vite exposes environment variables prefixed with `VITE_` on the `import.meta.env` object.
-// FIX: Cast `import.meta` to `any` to resolve TypeScript error about missing `env` property.
-const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-
-// A helper function to handle fetch responses consistently.
-// It checks if the response was successful (status 200-299). If not, it throws an error.
-// If successful, it parses the JSON body of the response.
-const handleResponse = async <T>(response: Response): Promise<T> => {
-  if (!response.ok) {
-    // Try to parse error details from the response body, otherwise provide a generic message.
-    const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-  }
-  return response.json();
-};
+import * as db from './database';
 
 // --- Game System API calls ---
 
-/** Fetches all game systems from the server. */
+/** Fetches all game systems from the database. */
 export const getGameSystems = async (): Promise<GameSystem[]> => {
-  const response = await fetch(`${API_BASE_URL}/game-systems`);
-  return handleResponse<GameSystem[]>(response);
+  return db.getGameSystems();
 };
 
 /** Adds a new game system to the database. */
 export const addGameSystem = async (system: Omit<GameSystem, 'id'>): Promise<GameSystem> => {
-  const response = await fetch(`${API_BASE_URL}/game-systems`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(system),
-  });
-  return handleResponse<GameSystem>(response);
+  return db.addGameSystem(system);
 };
 
 /** Updates an existing game system. */
 export const updateGameSystem = async (id: string, system: Partial<Omit<GameSystem, 'id'>>): Promise<GameSystem> => {
-    const response = await fetch(`${API_BASE_URL}/game-systems/${id}`, {
-      method: 'PUT', // or 'PATCH' depending on the API design
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(system),
-    });
-    return handleResponse<GameSystem>(response);
+    return db.updateGameSystem(id, system);
   };
   
 /** Deletes a game system by its ID. */
 export const deleteGameSystem = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/game-systems/${id}`, {
-    method: 'DELETE',
-  });
-  // DELETE requests often don't return a body, so we just check for success.
-  if (!response.ok) {
-    throw new Error('Failed to delete game system');
-  }
+  return db.deleteGameSystem(id);
 };
 
 
@@ -70,38 +34,22 @@ export const deleteGameSystem = async (id: string): Promise<void> => {
 
 /** Fetches all armies. */
 export const getArmies = async (): Promise<Army[]> => {
-  const response = await fetch(`${API_BASE_URL}/armies`);
-  return handleResponse<Army[]>(response);
+  return db.getArmies();
 };
 
 /** Adds a new army. */
 export const addArmy = async (army: Omit<Army, 'id'>): Promise<Army> => {
-    const response = await fetch(`${API_BASE_URL}/armies`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(army),
-    });
-    return handleResponse<Army>(response);
+    return db.addArmy(army);
 };
   
 /** Updates an existing army. */
 export const updateArmy = async (id: string, army: Partial<Omit<Army, 'id'>>): Promise<Army> => {
-    const response = await fetch(`${API_BASE_URL}/armies/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(army),
-    });
-    return handleResponse<Army>(response);
+    return db.updateArmy(id, army);
 };
 
 /** Deletes an army by its ID. */
 export const deleteArmy = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/armies/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) {
-    throw new Error('Failed to delete army');
-  }
+  return db.deleteArmy(id);
 };
 
 
@@ -109,114 +57,86 @@ export const deleteArmy = async (id: string): Promise<void> => {
 
 /** Fetches all models. */
 export const getModels = async (): Promise<Model[]> => {
-  const response = await fetch(`${API_BASE_URL}/models`);
-  return handleResponse<Model[]>(response);
+  return db.getModels();
 };
 
 /** Adds a new model. */
-// FIX: The type for a new model should not include id, createdAt, or lastUpdated,
-// as these are generated by the server. This resolves type errors in DataContext.
 export const addModel = async (model: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>): Promise<Model> => {
-    const response = await fetch(`${API_BASE_URL}/models`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(model),
-    });
-    return handleResponse<Model>(response);
+    return db.addModel(model);
 };
 
 /** Updates an existing model. */
 export const updateModel = async (id: string, model: Partial<Omit<Model, 'id'>>): Promise<Model> => {
-    const response = await fetch(`${API_BASE_URL}/models/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(model),
-    });
-    return handleResponse<Model>(response);
+    return db.updateModel(id, model);
 };
 
 /** Deletes a model by its ID. */
 export const deleteModel = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/models/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) {
-    throw new Error('Failed to delete model');
-  }
+  return db.deleteModel(id);
 };
 
 // --- Painting Session API calls ---
 
 /** Fetches all painting sessions. */
 export const getPaintingSessions = async (): Promise<PaintingSession[]> => {
-  const response = await fetch(`${API_BASE_URL}/painting-sessions`);
-  return handleResponse<PaintingSession[]>(response);
+  return db.getPaintingSessions();
 };
 
 /** Adds a new painting session. */
 export const addPaintingSession = async (session: Omit<PaintingSession, 'id'>): Promise<PaintingSession> => {
-    const response = await fetch(`${API_BASE_URL}/painting-sessions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(session),
-    });
-    return handleResponse<PaintingSession>(response);
+    return db.addPaintingSession(session);
 };
 
 /** Updates an existing painting session. */
 export const updatePaintingSession = async (id: string, session: Partial<Omit<PaintingSession, 'id'>>): Promise<PaintingSession> => {
-    const response = await fetch(`${API_BASE_URL}/painting-sessions/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(session),
-    });
-    return handleResponse<PaintingSession>(response);
+    return db.updatePaintingSession(id, session);
 };
 
 /** Deletes a painting session by its ID. */
 export const deletePaintingSession = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/painting-sessions/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) {
-    throw new Error('Failed to delete painting session');
-  }
+  return db.deletePaintingSession(id);
 };
 
 // --- Paint API calls ---
 
-/** Fetches all paints from the server. */
+/** Fetches all paints from the database. */
 export const getPaints = async (): Promise<Paint[]> => {
-  const response = await fetch(`${API_BASE_URL}/paints`);
-  return handleResponse<Paint[]>(response);
+  return db.getPaints();
 };
 
 /** Adds a new paint to the database. */
 export const addPaint = async (paint: Omit<Paint, 'id'>): Promise<Paint> => {
-  const response = await fetch(`${API_BASE_URL}/paints`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(paint),
-  });
-  return handleResponse<Paint>(response);
+  return db.addPaint(paint);
 };
 
 /** Updates an existing paint. */
 export const updatePaint = async (id: string, paint: Partial<Omit<Paint, 'id'>>): Promise<Paint> => {
-    const response = await fetch(`${API_BASE_URL}/paints/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(paint),
-    });
-    return handleResponse<Paint>(response);
+    return db.updatePaint(id, paint);
   };
   
 /** Deletes a paint by its ID. */
 export const deletePaint = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/paints/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) {
-    throw new Error('Failed to delete paint');
-  }
+  return db.deletePaint(id);
+};
+
+// --- Bulk Operations ---
+
+/** Bulk adds multiple models to the database. */
+export const bulkAddModels = async (models: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>[]): Promise<Model[]> => {
+  return db.bulkAddModels(models);
+};
+
+/** Bulk adds multiple paints to the database. */
+export const bulkAddPaints = async (paints: Omit<Paint, 'id'>[]): Promise<Paint[]> => {
+  return db.bulkAddPaints(paints);
+};
+
+// --- Global Operations ---
+
+/**
+ * Clears all data from the application.
+ * This is a destructive operation and will remove all game systems, armies, models, etc.
+ */
+export const clearAllData = async (): Promise<void> => {
+    return db.clearAllData();
 };

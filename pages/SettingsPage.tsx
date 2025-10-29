@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { GameSystem, Army } from '../types';
-import { PlusIcon, PencilIcon, TrashIcon, XIcon } from '../components/icons/Icons';
+import { PlusIcon, PencilIcon, TrashIcon, XIcon, ExclamationTriangleIcon } from '../components/icons/Icons';
 
 // A local modal component for editing a Game System.
 // This keeps the logic self-contained within the SettingsPage.
@@ -83,7 +83,8 @@ const SettingsPage: React.FC = () => {
         gameSystems, armies, 
         addGameSystem, updateGameSystem, deleteGameSystem,
         addArmy, updateArmy, deleteArmy,
-        minStockThreshold, updateMinStockThreshold
+        minStockThreshold, updateMinStockThreshold,
+        clearAllData
     } = useData();
 
     // State for managing the "Add Game System" form input.
@@ -158,6 +159,13 @@ const SettingsPage: React.FC = () => {
     const handleThresholdSave = (e: React.FormEvent) => {
         e.preventDefault();
         updateMinStockThreshold(localThreshold);
+    };
+
+    // --- Event Handler for Data Management ---
+    const handleClearData = () => {
+        if (window.confirm('Are you absolutely sure you want to clear all data? This action is irreversible and will remove all game systems, armies, models, and paints.')) {
+            clearAllData();
+        }
     };
 
     return (
@@ -256,7 +264,7 @@ const SettingsPage: React.FC = () => {
                     </ul>
                 </div>
                  {/* Inventory Settings Card */}
-                <div className="bg-surface p-6 rounded-lg shadow-md border border-border lg:col-span-2">
+                <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
                     <h2 className="text-2xl font-semibold text-white mb-4">Inventory Settings</h2>
                     <form onSubmit={handleThresholdSave} className="space-y-3 max-w-sm">
                         <div>
@@ -279,6 +287,24 @@ const SettingsPage: React.FC = () => {
                             Save Threshold
                         </button>
                     </form>
+                </div>
+                 {/* Data Management Card */}
+                 <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
+                    <h2 className="text-2xl font-semibold text-white mb-4">Data Management</h2>
+                    <div className="space-y-4 max-w-sm">
+                        <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">Clear All Data</label>
+                            <p className="text-xs text-text-secondary mb-2">
+                                This will permanently delete all game systems, armies, models, and paints. This action cannot be undone.
+                            </p>
+                            <button 
+                                onClick={handleClearData}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors"
+                            >
+                                <ExclamationTriangleIcon /> Clear All Application Data
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             {editingSystem && (

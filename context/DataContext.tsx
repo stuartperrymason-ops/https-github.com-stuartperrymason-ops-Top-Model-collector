@@ -26,6 +26,8 @@ interface DataContextState {
   // Functions to interact with the state
   addToast: (message: string, type: 'success' | 'error') => void;
   updateMinStockThreshold: (threshold: number) => void;
+  clearAllData: () => Promise<void>;
+
   // Game System functions
   addGameSystem: (name: string, colorScheme: GameSystem['colorScheme']) => Promise<GameSystem | undefined>;
   updateGameSystem: (id: string, updates: Partial<Omit<GameSystem, 'id'>>) => Promise<void>;
@@ -138,6 +140,23 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setMinStockThreshold(parseInt(savedThreshold, 10));
     }
   }, [fetchData]);
+
+  const clearAllData = async () => {
+    try {
+        await apiService.clearAllData();
+        // Reset all state to its initial empty state.
+        setGameSystems([]);
+        setArmies([]);
+        setModels([]);
+        setPaintingSessions([]);
+        setPaints([]);
+        setMinStockThreshold(1); // Reset to default
+        addToast('All data has been cleared successfully!', 'success');
+    } catch (err) {
+        console.error('Failed to clear all data:', err);
+        addToast('Failed to clear data. Please check the console for errors.', 'error');
+    }
+  };
 
   // --- CRUD operations for Game Systems ---
   // Each function follows a similar pattern:
@@ -266,11 +285,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // --- Bulk operations for Models ---
   const bulkAddModels = async (modelsToAdd: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>[]) => {
     try {
-      // The API service calls `addModel` for each item. In a real-world scenario,
-      // this would ideally be a single API endpoint that accepts an array of models.
-      const addedModels = await Promise.all(
-        modelsToAdd.map(model => apiService.addModel(model))
-      );
+      const addedModels = await apiService.bulkAddModels(modelsToAdd);
       setModels(prev => [...prev, ...addedModels]);
       // Toast notifications are handled on the BulkDataPage for more detailed feedback.
     } catch (err) {
@@ -382,9 +397,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // --- Bulk operations for Paints ---
   const bulkAddPaints = async (paintsToAdd: Omit<Paint, 'id'>[]) => {
     try {
-        const addedPaints = await Promise.all(
-            paintsToAdd.map(paint => apiService.addPaint(paint))
-        );
+        const addedPaints = await apiService.bulkAddPaints(paintsToAdd);
         setPaints(prev => [...prev, ...addedPaints].sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err) {
         console.error('Failed to bulk add paints:', err);
@@ -427,6 +440,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     toasts,
     minStockThreshold,
     updateMinStockThreshold,
+    clearAllData,
     addToast,
     addGameSystem,
     updateGameSystem,
