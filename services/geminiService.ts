@@ -2,41 +2,44 @@
  * @file geminiService.ts
  * @description This service handles communication with the Google Gemini API.
  * It provides a function to generate flavorful descriptions for models based on their name, army, and game system.
+ * This program was written by Stuart Mason October 2025.
  */
 
 import { GoogleGenAI } from "@google/genai";
 
 /**
  * Generates a model description using the Gemini API.
- * @param modelName - The name of the model.
- * @param armyName - The name of the army the model belongs to.
- * @param gameSystem - The game system universe.
+ * @param modelName - The name of the model (e.g., "Primaris Intercessor").
+ * @param armyName - The name of the army the model belongs to (e.g., "Space Marines").
+ * @param gameSystem - The game system universe (e.g., "Warhammer 40,000").
  * @returns A promise that resolves to the generated description string.
  */
 export const generateDescription = async (modelName: string, armyName: string, gameSystem: string): Promise<string> => {
-  // Ensure the API key is available from environment variables before proceeding.
-  if (!process.env.API_KEY) {
-    console.error("API_KEY environment variable not set.");
-    return "API key not configured. Please set the API_KEY environment variable.";
-  }
-  
   try {
-    // Initialize the Google GenAI client.
+    // FIX: Per coding guidelines, use process.env.API_KEY to get the Gemini API key.
+    // The API key is sourced from an environment variable, assumed to be configured
+    // and accessible in the execution environment.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Construct a detailed prompt to guide the AI in generating a relevant and thematic description.
-    const prompt = `Generate a short, flavorful, one-paragraph description for the tabletop miniature model "${modelName}" from the "${armyName}" army in the "${gameSystem}" universe. Focus on its role on the battlefield or its lore.`;
+    // Construct a detailed prompt to guide the AI. This is a form of "prompt engineering"
+    // where we provide clear, structured instructions to get a high-quality, relevant response.
+    // The prompt specifies the desired content, structure (two or three paragraphs), and tone.
+    const prompt = `Generate a detailed and engaging description for the tabletop miniature model "${modelName}" from the "${armyName}" army in the "${gameSystem}" universe. The description should be two or three paragraphs. Start with its lore and background, then describe its typical role and capabilities on the battlefield. Conclude with a sentence that captures its essence or threat.`;
     
-    // Call the Gemini API to generate content.
+    // Call the Gemini API's generateContent method. This is an asynchronous operation.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash', // Using a fast and efficient model suitable for this task.
+        // 'gemini-2.5-flash' is chosen for its balance of speed and capability, making it
+        // suitable for generating descriptive text quickly.
+        model: 'gemini-2.5-flash',
         contents: prompt,
     });
     
-    // Extract and return the text from the response.
+    // The API response object contains the generated text. We access it via the `.text` property
+    // and use `.trim()` to remove any leading/trailing whitespace for a clean output.
     return response.text.trim();
   } catch (error) {
-    // Basic error handling in case the API call fails.
+    // If the API call fails for any reason (e.g., network error, invalid key),
+    // we catch the error, log it for debugging, and return a user-friendly error message.
     console.error("Error generating description with Gemini API:", error);
     return "Failed to generate description. Please try again later.";
   }

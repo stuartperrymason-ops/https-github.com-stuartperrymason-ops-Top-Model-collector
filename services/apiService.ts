@@ -1,86 +1,142 @@
 /**
  * @file apiService.ts
- * @description This service centralizes all communication with the backend API.
- * It provides functions for CRUD (Create, Read, Update, Delete) operations on all data models.
- * This abstracts away the fetch logic from the components and context.
+ * @description This service provides functions for interacting with the local database.
+ * It encapsulates all calls for CRUD operations on game systems, armies, and models.
  */
 
-import { Model, Army, GameSystem } from '../types';
+import { GameSystem, Army, Model, PaintingSession, Paint } from '../types';
+import * as db from './database';
 
-// The base URL for our API. In a real app, this would come from an environment variable.
-const API_BASE_URL = '/api';
+// --- Game System API calls ---
+
+/** Fetches all game systems from the database. */
+export const getGameSystems = async (): Promise<GameSystem[]> => {
+  return db.getGameSystems();
+};
+
+/** Adds a new game system to the database. */
+export const addGameSystem = async (system: Omit<GameSystem, 'id'>): Promise<GameSystem> => {
+  return db.addGameSystem(system);
+};
+
+/** Updates an existing game system. */
+export const updateGameSystem = async (id: string, system: Partial<Omit<GameSystem, 'id'>>): Promise<GameSystem> => {
+    return db.updateGameSystem(id, system);
+  };
+  
+/** Deletes a game system by its ID. */
+export const deleteGameSystem = async (id: string): Promise<void> => {
+  return db.deleteGameSystem(id);
+};
+
+
+// --- Army API calls ---
+
+/** Fetches all armies. */
+export const getArmies = async (): Promise<Army[]> => {
+  return db.getArmies();
+};
+
+/** Adds a new army. */
+export const addArmy = async (army: Omit<Army, 'id'>): Promise<Army> => {
+    return db.addArmy(army);
+};
+  
+/** Updates an existing army. */
+export const updateArmy = async (id: string, army: Partial<Omit<Army, 'id'>>): Promise<Army> => {
+    return db.updateArmy(id, army);
+};
+
+/** Deletes an army by its ID. */
+export const deleteArmy = async (id: string): Promise<void> => {
+  return db.deleteArmy(id);
+};
+
+
+// --- Model API calls ---
+
+/** Fetches all models. */
+export const getModels = async (): Promise<Model[]> => {
+  return db.getModels();
+};
+
+/** Adds a new model. */
+export const addModel = async (model: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>): Promise<Model> => {
+    return db.addModel(model);
+};
+
+/** Updates an existing model. */
+export const updateModel = async (id: string, model: Partial<Omit<Model, 'id'>>): Promise<Model> => {
+    return db.updateModel(id, model);
+};
+
+/** Deletes a model by its ID. */
+export const deleteModel = async (id: string): Promise<void> => {
+  return db.deleteModel(id);
+};
+
+// --- Painting Session API calls ---
+
+/** Fetches all painting sessions. */
+export const getPaintingSessions = async (): Promise<PaintingSession[]> => {
+  return db.getPaintingSessions();
+};
+
+/** Adds a new painting session. */
+export const addPaintingSession = async (session: Omit<PaintingSession, 'id'>): Promise<PaintingSession> => {
+    return db.addPaintingSession(session);
+};
+
+/** Updates an existing painting session. */
+export const updatePaintingSession = async (id: string, session: Partial<Omit<PaintingSession, 'id'>>): Promise<PaintingSession> => {
+    return db.updatePaintingSession(id, session);
+};
+
+/** Deletes a painting session by its ID. */
+export const deletePaintingSession = async (id: string): Promise<void> => {
+  return db.deletePaintingSession(id);
+};
+
+// --- Paint API calls ---
+
+/** Fetches all paints from the database. */
+export const getPaints = async (): Promise<Paint[]> => {
+  return db.getPaints();
+};
+
+/** Adds a new paint to the database. */
+export const addPaint = async (paint: Omit<Paint, 'id'>): Promise<Paint> => {
+  return db.addPaint(paint);
+};
+
+/** Updates an existing paint. */
+export const updatePaint = async (id: string, paint: Partial<Omit<Paint, 'id'>>): Promise<Paint> => {
+    return db.updatePaint(id, paint);
+  };
+  
+/** Deletes a paint by its ID. */
+export const deletePaint = async (id: string): Promise<void> => {
+  return db.deletePaint(id);
+};
+
+// --- Bulk Operations ---
+
+/** Bulk adds multiple models to the database. */
+export const bulkAddModels = async (models: Omit<Model, 'id' | 'createdAt' | 'lastUpdated'>[]): Promise<Model[]> => {
+  return db.bulkAddModels(models);
+};
+
+/** Bulk adds multiple paints to the database. */
+export const bulkAddPaints = async (paints: Omit<Paint, 'id'>[]): Promise<Paint[]> => {
+  return db.bulkAddPaints(paints);
+};
+
+// --- Global Operations ---
 
 /**
- * A helper function to handle fetch responses.
- * It checks for HTTP errors and parses the JSON response.
- * @param response - The Response object from a fetch call.
- * @returns A promise that resolves with the JSON data.
+ * Clears all data from the application.
+ * This is a destructive operation and will remove all game systems, armies, models, etc.
  */
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API Error: ${response.statusText} - ${errorText}`);
-  }
-  return response.json() as Promise<T>;
-}
-
-// --- Game System API ---
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const getGameSystems = (): Promise<GameSystem[]> => fetch(`${API_BASE_URL}/gamesystems`).then(res => handleResponse<GameSystem[]>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const addGameSystem = (data: Omit<GameSystem, 'id'>): Promise<GameSystem> => fetch(`${API_BASE_URL}/gamesystems`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<GameSystem>(res));
-export const deleteGameSystem = (id: string): Promise<void> => fetch(`${API_BASE_URL}/gamesystems/${id}`, { method: 'DELETE' }).then(res => { if(!res.ok) throw new Error('Failed to delete')});
-
-// --- Army API ---
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const getArmies = (): Promise<Army[]> => fetch(`${API_BASE_URL}/armies`).then(res => handleResponse<Army[]>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const addArmy = (data: Omit<Army, 'id'>): Promise<Army> => fetch(`${API_BASE_URL}/armies`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<Army>(res));
-export const deleteArmy = (id: string): Promise<void> => fetch(`${API_BASE_URL}/armies/${id}`, { method: 'DELETE' }).then(res => { if(!res.ok) throw new Error('Failed to delete')});
-
-// --- Model API ---
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const getModels = (): Promise<Model[]> => fetch(`${API_BASE_URL}/models`).then(res => handleResponse<Model[]>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const addModel = (data: Omit<Model, 'id'>): Promise<Model> => fetch(`${API_BASE_URL}/models`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<Model>(res));
-// FIX: Explicitly provide the generic type to handleResponse to fix promise type mismatch error.
-export const updateModel = (id: string, data: Model): Promise<Model> => fetch(`${API_BASE_URL}/models/${id}`, {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data),
-}).then(res => handleResponse<Model>(res));
-export const deleteModel = (id: string): Promise<void> => fetch(`${API_BASE_URL}/models/${id}`, { method: 'DELETE' }).then(res => { if(!res.ok) throw new Error('Failed to delete')});
-
-// --- Bulk Import API ---
-export const bulkImport = (data: { models: Model[]; armies: Army[]; gameSystems: GameSystem[] }): Promise<void> => fetch(`${API_BASE_URL}/bulk-import`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-}).then(res => { if(!res.ok) throw new Error('Failed to import')});
-
-
-/**
- * Fetches all initial data required for the application to start.
- * @returns A promise that resolves with the complete application state.
- */
-export const getInitialData = async () => {
-    // Using Promise.all to fetch all data in parallel for faster loading.
-    const [gameSystems, armies, models] = await Promise.all([
-        getGameSystems(),
-        getArmies(),
-        getModels(),
-    ]);
-    return { gameSystems, armies, models };
+export const clearAllData = async (): Promise<void> => {
+    return db.clearAllData();
 };

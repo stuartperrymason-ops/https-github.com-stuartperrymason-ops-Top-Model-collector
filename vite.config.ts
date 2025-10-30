@@ -1,23 +1,13 @@
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
+/**
+ * This program was written by Stuart Mason October 2025.
+ */
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0',
-      },
-      plugins: [react()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
-      }
-    };
-});
+// https://vitejs.dev/config/
+// This is the main configuration file for Vite, the build tool used for this project.
+export default defineConfig({
+  // The `plugins` array is where we add Vite plugins.
+  // `@vitejs/plugin-react` provides React-specific features like Fast Refresh (HMR) and JSX transformation.
+  plugins: [react()],
+})
