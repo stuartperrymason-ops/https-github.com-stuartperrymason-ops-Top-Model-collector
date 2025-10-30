@@ -243,35 +243,67 @@ const BulkDataPage: React.FC = () => {
             let skippedDuplicatesCount = 0;
             const finalErrors: ModelValidationResult[] = [];
     
-            results.forEach(result => {
+            for (const result of results) {
                 if (result.status === 'ERROR' || !result.import) {
                     if (result.status === 'ERROR') finalErrors.push(result);
                     if (!result.import && result.status === 'DUPLICATE') skippedDuplicatesCount++;
-                    return;
+                    continue;
                 }
     
                 const { row, data } = result;
-                if (!data) return;
+                if (!data) continue;
     
                 const gameSystem = allGameSystems.find(gs => gs.name.trim().toLowerCase() === row['game system'].trim().toLowerCase());
                 if (!gameSystem) {
                     finalErrors.push({ ...result, status: 'ERROR', errorMessage: `Failed to find/create game system: ${row['game system']}` });
-                    return;
+                    continue;
                 }
     
-                const armyNames = row.army.split(',').map(n => n.trim().toLowerCase());
-                const armyIds = allArmies
-                    .filter(a => a.gameSystemId === gameSystem.id && armyNames.includes(a.name.trim().toLowerCase()))
-                    .map(a => a.id);
-                
-                if (armyIds.length !== armyNames.length) {
+                // Defensive army name handling:
+                // - preserve original casing for creation
+                // - normalize names for lookups (trim + lowercase)
+                // - dedupe names so duplicates in CSV don't cause mismatches
+                const rawArmyNames = row.army.split(',').map(n => n.trim()).filter(n => n.length > 0);
+                const armyNamesNormalized = Array.from(new Set(rawArmyNames.map(n => n.toLowerCase())));
+
+                // Build a quick lookup for existing armies within the target game system.
+                const armyLookup = new Map<string, string>(); // normalized name -> id
+                allArmies
+                    .filter(a => a.gameSystemId === gameSystem.id)
+                    .forEach(a => armyLookup.set(a.name.trim().toLowerCase(), a.id));
+
+                const armyIds: string[] = [];
+                // For each original name (preserving the original for creation if needed),
+                // attempt to lookup an ID; if missing, create the army on-the-fly.
+                for (const originalName of rawArmyNames) {
+                    const key = originalName.trim().toLowerCase();
+                    let id = armyLookup.get(key);
+                    if (!id) {
+                        // Try to create the missing army and add it to our lookup and allArmies list.
+                        try {
+                            const created = await addArmy(originalName, gameSystem.id);
+                            if (created) {
+                                id = created.id;
+                                armyLookup.set(key, id);
+                                allArmies.push(created);
+                            }
+                        } catch (err) {
+                            // If creation fails, we'll catch it in the length check below and return a helpful error.
+                            console.error('Failed to create army during import:', originalName, err);
+                        }
+                    }
+                    if (id) armyIds.push(id);
+                }
+
+                // After attempting creation, ensure we have a matching id for every distinct army name.
+                if (armyIds.length !== armyNamesNormalized.length) {
                     finalErrors.push({ ...result, status: 'ERROR', errorMessage: `Failed to find/create one or more armies for ${row.name}` });
                     return;
                 }
     
                 modelsToAdd.push({ ...data, gameSystemId: gameSystem.id, armyIds: armyIds });
                 successCount++;
-            });
+            }
             
             if (modelsToAdd.length > 0) {
                 await bulkAddModels(modelsToAdd);
