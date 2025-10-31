@@ -24,12 +24,18 @@ These diagrams reflect the current implementation: frontend-only app that persis
 
 ```mermaid
 graph TD
-    subgraph Frontend (Browser)
-        A[UI Components-Pages & Modals] -->|calls| B[DataContext -global state]
-        B -->|uses| C[apiService.ts -localStorage wrapper]
-        C -->|reads/writes| D[localStorage JSON keys]
-        B -->|re-renders| A
+    %% Frontend-only data flow (safer node labels and explicit newlines)
+    subgraph Frontend_Browser[Frontend (Browser)]
+        A["UI Components\n(Pages & Modals)"]
+        B["DataContext\n(global state)"]
+        C["apiService.ts\n(localStorage wrapper)"]
+        D["localStorage\n(JSON keys)"]
     end
+
+    A -->|calls| B
+    B -->|uses| C
+    C -->|reads/writes| D
+    B -->|re-renders| A
 
     style A fill:#8d99ae,stroke:#2b2d42,stroke-width:2px
     style B fill:#a2d2ff,stroke:#2b2d42,stroke-width:2px
@@ -40,6 +46,8 @@ graph TD
 ### 2. Sequence: Adding a New Model (current)
 
 ```mermaid
+sequenceDiagram
+    actor User
 sequenceDiagram
     actor User
     participant CollectionPage
@@ -53,34 +61,32 @@ sequenceDiagram
     User->>ModelFormModal: Fills form and submits
     ModelFormModal->>DataContext: calls addModel(formData)
     DataContext->>apiService: calls addModel(formData)
-    apiService->>localStorage: writes to `models.json`
+    apiService->>localStorage: writes to models.json
     apiService-->>DataContext: returns newly created model
     DataContext->>CollectionPage: updates state and re-renders
     ModelFormModal->>CollectionPage: closes
-```
-
 ### 3. Bulk CSV Import + Repair Flow (current)
 
 This flow shows both import and the non-destructive repair mechanism (with backups).
 
 ```mermaid
 flowchart TD
-    Start([Start]) --> Select[User selects CSV file]
-    Select --> Parse{Parse CSV (PapaParse)}
-    Parse --> Validate[Validate rows]
-    Validate --> Review{Any new items / duplicates / errors?}
-    Review -- No --> Finalize[Finalize import]
-    Review -- Yes --> ReviewModal[Show Review Modal]
-    ReviewModal --> Confirm{User confirms creations/import selections}
-    Confirm --> Create[Create missing Game Systems & Armies (apiService -> localStorage)]
-    Create --> Prepare[Prepare final model list]
-    Prepare --> BulkAdd[Call bulkAddModels (apiService -> localStorage)]
-    BulkAdd --> Summary[Show Import Summary]
+    Start([Start]) --> Select["User selects CSV file"]
+    Select --> Parse{"Parse CSV\n(PapaParse)"}
+    Parse --> Validate["Validate rows"]
+    Validate --> Review{"Any new items / duplicates / errors?"}
+    Review -- No --> Finalize["Finalize import"]
+    Review -- Yes --> ReviewModal["Show Review Modal"]
+    ReviewModal --> Confirm{"User confirms creations/import selections"}
+    Confirm --> Create["Create missing Game Systems & Armies\n(apiService -> localStorage)"]
+    Create --> Prepare["Prepare final model list"]
+    Prepare --> BulkAdd["Call bulkAddModels\n(apiService -> localStorage)"]
+    BulkAdd --> Summary["Show Import Summary"]
 
     %% Repair path
-    Parse --> RepairPreview[Preview Repair]
-    RepairPreview --> Backup[Save backup to localStorage key: tmc_backup_YYYY-...]
-    Backup --> RepairActions[Create missing systems/armies and update matching models]
+    Parse --> RepairPreview["Preview Repair"]
+    RepairPreview --> Backup["Save backup to localStorage key: tmc_backup_YYYY-..."]
+    Backup --> RepairActions["Create missing systems/armies\nand update matching models"]
     RepairActions --> Summary
 
     style ReviewModal fill:#ffefc7,stroke:#b07500
