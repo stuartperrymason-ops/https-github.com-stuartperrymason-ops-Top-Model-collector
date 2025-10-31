@@ -5,7 +5,7 @@
  * This program was written by Stuart Mason October 2025.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Army, GameSystem, Model, Paint } from '../types';
 import Papa from 'papaparse'; // A powerful CSV parser for the browser.
@@ -62,7 +62,7 @@ const BulkDataPage: React.FC = () => {
     // Access global data and functions from the DataContext.
     const { 
         gameSystems, armies, models, paints, addToast, 
-        bulkAddModels, addGameSystem, addArmy, bulkAddPaints 
+        bulkAddModels, addGameSystem, addArmy, bulkAddPaints, updateModel
     } = useData();
     
     // --- State for Model Import ---
@@ -225,16 +225,23 @@ const BulkDataPage: React.FC = () => {
             )).filter((s): s is GameSystem => s !== undefined);
             
             const allGameSystems = [...gameSystems, ...createdSystems];
+            // Build a quick lookup map for game systems by normalized name to avoid repeated find() calls
+            const gameSystemLookup = new Map<string, string>(); // normalized name -> id
+            allGameSystems.forEach(gs => gameSystemLookup.set(gs.name.trim().toLowerCase(), gs.id));
     
-            const createdArmies = (await Promise.all(
-                armiesToCreate.map(async (army) => {
-                    const gameSystem = allGameSystems.find(gs => gs.name.trim().toLowerCase() === army.gameSystemName.trim().toLowerCase());
-                    if (gameSystem) {
-                        return addArmy(army.name, gameSystem.id);
+            // Create armiesToCreate sequentially to ensure correct gameSystem resolution and stable state updates
+            const createdArmies: Army[] = [];
+            for (const army of armiesToCreate) {
+                const gsId = gameSystemLookup.get(army.gameSystemName.trim().toLowerCase());
+                if (gsId) {
+                    const created = await addArmy(army.name, gsId);
+                    if (created) {
+                        createdArmies.push(created);
                     }
-                    return undefined;
-                })
-            )).filter((a): a is Army => a !== undefined);
+                } else {
+                    console.warn('Could not find game system for army creation:', army);
+                }
+            }
             
             const allArmies = [...armies, ...createdArmies];
             
@@ -259,10 +266,10 @@ const BulkDataPage: React.FC = () => {
                     continue;
                 }
     
-                // Defensive army name handling:
-                // - preserve original casing for creation
-                // - normalize names for lookups (trim + lowercase)
-                // - dedupe names so duplicates in CSV don't cause mismatches
+                // Defensive army name handling (per-row):
+                // - normalize and dedupe army names (trim + lowercase) and iterate unique names
+                // - preserve an original-looking name when creating a missing army
+                // - ensure only one id per distinct army name is produced
                 const rawArmyNames = row.army.split(',').map(n => n.trim()).filter(n => n.length > 0);
                 const armyNamesNormalized = Array.from(new Set(rawArmyNames.map(n => n.toLowerCase())));
 
@@ -273,23 +280,21 @@ const BulkDataPage: React.FC = () => {
                     .forEach(a => armyLookup.set(a.name.trim().toLowerCase(), a.id));
 
                 const armyIds: string[] = [];
-                // For each original name (preserving the original for creation if needed),
-                // attempt to lookup an ID; if missing, create the army on-the-fly.
-                for (const originalName of rawArmyNames) {
-                    const key = originalName.trim().toLowerCase();
-                    let id = armyLookup.get(key);
+                // Iterate unique normalized army names so duplicates in a CSV row don't create multiple IDs
+                for (const normalizedName of armyNamesNormalized) {
+                    let id = armyLookup.get(normalizedName);
                     if (!id) {
-                        // Try to create the missing army and add it to our lookup and allArmies list.
+                        // Find an original-cased name from the raw list to use when creating the army.
+                        const originalCandidate = rawArmyNames.find(rn => rn.toLowerCase() === normalizedName) || normalizedName;
                         try {
-                            const created = await addArmy(originalName, gameSystem.id);
+                            const created = await addArmy(originalCandidate, gameSystem.id);
                             if (created) {
                                 id = created.id;
-                                armyLookup.set(key, id);
+                                armyLookup.set(normalizedName, id);
                                 allArmies.push(created);
                             }
                         } catch (err) {
-                            // If creation fails, we'll catch it in the length check below and return a helpful error.
-                            console.error('Failed to create army during import:', originalName, err);
+                            console.error('Failed to create army during import:', originalCandidate, err);
                         }
                     }
                     if (id) armyIds.push(id);
@@ -298,7 +303,8 @@ const BulkDataPage: React.FC = () => {
                 // After attempting creation, ensure we have a matching id for every distinct army name.
                 if (armyIds.length !== armyNamesNormalized.length) {
                     finalErrors.push({ ...result, status: 'ERROR', errorMessage: `Failed to find/create one or more armies for ${row.name}` });
-                    return;
+                    // don't abort the entire import, continue to process remaining rows
+                    continue;
                 }
     
                 modelsToAdd.push({ ...data, gameSystemId: gameSystem.id, armyIds: armyIds });
@@ -359,7 +365,7 @@ const BulkDataPage: React.FC = () => {
 
     const validatePaintCsvData = (data: PaintCsvRow[]) => {
         const results: PaintValidationResult[] = [];
-        const validPaintTypes: Paint['paintType'][] = ['Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air'];
+    const validPaintTypes: Paint['paintType'][] = ['Primer', 'Wash', 'Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air', 'Metallic'];
 
         data.forEach((row, index) => {
             if (Object.values(row).every(val => val === null || val === '')) return;
@@ -469,6 +475,306 @@ const BulkDataPage: React.FC = () => {
         if (fileInput) fileInput.value = '';
     };
 
+    // --- In-place Repair (non-destructive) ---
+    const [repairFile, setRepairFile] = useState<File | null>(null);
+    const [isRepairing, setIsRepairing] = useState(false);
+    const [showRepairPreviewModal, setShowRepairPreviewModal] = useState(false);
+    const [repairPreviewRows, setRepairPreviewRows] = useState<Array<{
+        rowIndex: number;
+        name: string;
+        gameSystemName: string;
+        matchingModelIds: string[];
+        matchingModelNames: string[];
+        existingGameSystem?: string;
+        missingGameSystem: boolean;
+        existingArmies: string[];
+        missingArmies: string[];
+    }>>([]);
+    // Backup management
+    const [availableBackups, setAvailableBackups] = useState<Array<{ key: string; createdAt: string; systems: number; armies: number; models: number; paints: number }>>([]);
+    const [showRestoreModal, setShowRestoreModal] = useState(false);
+    const [restoreInProgress, setRestoreInProgress] = useState(false);
+    const [selectedBackupKey, setSelectedBackupKey] = useState<string | null>(null);
+
+    const handleRepairFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) setRepairFile(e.target.files[0]);
+    };
+
+    const handleRepairFromCsv = () => {
+        if (!repairFile) {
+            addToast('Please select a CSV file to repair from.', 'error');
+            return;
+        }
+
+        // Non-destructive backup of current localStorage data
+        try {
+            const backupObj = {
+                gameSystems: localStorage.getItem('game-systems.json'),
+                armies: localStorage.getItem('armies.json'),
+                models: localStorage.getItem('models.json'),
+                paints: localStorage.getItem('paints.json')
+            };
+            // in-memory copy for quick access
+            (window as any)._tmc_backup = backupObj;
+            // persist backup to localStorage under a timestamped key
+            const ts = new Date().toISOString();
+            const backupKey = `tmc_backup_${ts}`;
+            try {
+                localStorage.setItem(backupKey, JSON.stringify(backupObj));
+                // refresh available backups list
+                loadAvailableBackups();
+            } catch (err) {
+                console.warn('Failed to persist repair backup to localStorage', err);
+            }
+        } catch (err) {
+            console.warn('Failed to write backup to window._tmc_backup', err);
+        }
+
+        setIsRepairing(true);
+
+        Papa.parse<ModelCsvRow>(repairFile, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const rows = results.data;
+                // Work with local snapshots and update as we create new systems/armies
+                const allGameSystems = [...gameSystems];
+                const allArmies = [...armies];
+
+                // helper to normalize
+                const normalize = (s: string) => s.trim().toLowerCase();
+
+                let updatedCount = 0;
+                let createdSystemsCount = 0;
+                let createdArmiesCount = 0;
+
+                for (const row of rows) {
+                    if (!row || !row.name) continue;
+                    const modelName = row.name.trim();
+                    const gsName = (row['game system'] || '').trim();
+                    const rawArmyNames = (row.army || '').split(',').map(n => n.trim()).filter(n => n.length > 0);
+                    if (!gsName || rawArmyNames.length === 0) continue;
+
+                    // Find models matching this name (case-insensitive)
+                    const matchingModels = models.filter(m => m.name.trim().toLowerCase() === modelName.toLowerCase());
+                    if (matchingModels.length === 0) continue;
+
+                    // Find or create game system
+                    let gameSystem = allGameSystems.find(gs => normalize(gs.name) === normalize(gsName));
+                    if (!gameSystem) {
+                        try {
+                            const created = await addGameSystem(gsName, { primary: '#4f46e5', secondary: '#10b981', background: '#1f2937' });
+                            if (created) {
+                                gameSystem = created;
+                                allGameSystems.push(created);
+                                createdSystemsCount++;
+                            }
+                        } catch (err) {
+                            console.error('Failed to create game system during repair:', gsName, err);
+                            continue;
+                        }
+                    }
+
+                    // Build army lookup for this game system
+                    const armyLookup = new Map<string, string>();
+                    allArmies.filter(a => a.gameSystemId === gameSystem!.id).forEach(a => armyLookup.set(normalize(a.name), a.id));
+
+                    const armyNamesNormalized = Array.from(new Set(rawArmyNames.map(n => normalize(n))));
+                    const armyIds: string[] = [];
+
+                    for (const normalizedName of armyNamesNormalized) {
+                        let id = armyLookup.get(normalizedName);
+                        if (!id) {
+                            // find original casing
+                            const originalCandidate = rawArmyNames.find(rn => normalize(rn) === normalizedName) || normalizedName;
+                            try {
+                                const created = await addArmy(originalCandidate, gameSystem!.id);
+                                if (created) {
+                                    id = created.id;
+                                    armyLookup.set(normalizedName, id);
+                                    allArmies.push(created);
+                                    createdArmiesCount++;
+                                }
+                            } catch (err) {
+                                console.error('Failed to create army during repair:', originalCandidate, err);
+                            }
+                        }
+                        if (id) armyIds.push(id);
+                    }
+
+                    if (armyIds.length === 0) continue;
+
+                    // Update all matching models to have the resolved gameSystemId and armyIds
+                    const dedupedArmyIds = Array.from(new Set(armyIds));
+                    for (const m of matchingModels) {
+                        try {
+                            await updateModel(m.id, { gameSystemId: gameSystem!.id, armyIds: dedupedArmyIds });
+                            updatedCount++;
+                        } catch (err) {
+                            console.error('Failed to update model during repair:', m, err);
+                        }
+                    }
+                }
+
+                setIsRepairing(false);
+                addToast(`Repair complete — updated ${updatedCount} models. Created ${createdSystemsCount} systems and ${createdArmiesCount} armies. Backup stored in window._tmc_backup.`, 'success');
+                // clear the selected file input
+                const fileInput = document.getElementById('repair-csv-file-input') as HTMLInputElement;
+                if (fileInput) fileInput.value = '';
+                setRepairFile(null);
+            },
+            error: (err) => {
+                setIsRepairing(false);
+                addToast(`Repair CSV parse failed: ${err.message}`, 'error');
+            }
+        });
+    };
+
+    // --- Backup utilities ---
+    const loadAvailableBackups = () => {
+        const backups: Array<{ key: string; createdAt: string; systems: number; armies: number; models: number; paints: number }> = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('tmc_backup_')) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    const parsed = JSON.parse(raw);
+                    const systems = parsed.gameSystems ? JSON.parse(parsed.gameSystems).length : 0;
+                    const armies = parsed.armies ? JSON.parse(parsed.armies).length : 0;
+                    const models = parsed.models ? JSON.parse(parsed.models).length : 0;
+                    const paints = parsed.paints ? JSON.parse(parsed.paints).length : 0;
+                    const createdAt = key.replace('tmc_backup_', '');
+                    backups.push({ key, createdAt, systems, armies, models, paints });
+                } catch (err) {
+                    console.warn('Failed to parse backup', key, err);
+                }
+            }
+        }
+        // sort newest first
+        backups.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setAvailableBackups(backups);
+    };
+
+    useEffect(() => {
+        loadAvailableBackups();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const restoreBackup = async (key: string) => {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+            addToast('Selected backup not found.', 'error');
+            return;
+        }
+        let parsed: any;
+        try {
+            parsed = JSON.parse(raw);
+        } catch (err) {
+            addToast('Failed to parse backup.', 'error');
+            return;
+        }
+
+        if (!confirm(`Restore backup from ${key.replace('tmc_backup_', '')}? This will overwrite current data files. The backup itself will be preserved.`)) return;
+
+        setRestoreInProgress(true);
+        try {
+            if (parsed.gameSystems !== null && parsed.gameSystems !== undefined) localStorage.setItem('game-systems.json', parsed.gameSystems);
+            if (parsed.armies !== null && parsed.armies !== undefined) localStorage.setItem('armies.json', parsed.armies);
+            if (parsed.models !== null && parsed.models !== undefined) localStorage.setItem('models.json', parsed.models);
+            if (parsed.paints !== null && parsed.paints !== undefined) localStorage.setItem('paints.json', parsed.paints);
+
+            addToast('Backup restored. Reloading to refresh app state...', 'success');
+            // give toast a moment then reload
+            setTimeout(() => window.location.reload(), 800);
+        } catch (err) {
+            console.error('Failed to restore backup:', err);
+            addToast('Failed to restore backup.', 'error');
+        } finally {
+            setRestoreInProgress(false);
+        }
+    };
+
+    const deleteBackup = (key: string) => {
+        if (!confirm(`Delete backup ${key.replace('tmc_backup_', '')}? This action cannot be undone.`)) return;
+        try {
+            localStorage.removeItem(key);
+            addToast('Backup deleted.', 'success');
+            loadAvailableBackups();
+        } catch (err) {
+            console.error('Failed to delete backup:', err);
+            addToast('Failed to delete backup.', 'error');
+        }
+    };
+
+    const handlePreviewFromCsv = () => {
+        if (!repairFile) {
+            addToast('Please select a CSV file to preview.', 'error');
+            return;
+        }
+
+        Papa.parse<ModelCsvRow>(repairFile, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const rows = results.data;
+                const normalize = (s: string) => s.trim().toLowerCase();
+
+                const allGameSystems = [...gameSystems];
+                const allArmies = [...armies];
+
+                const preview: Array<any> = [];
+
+                rows.forEach((row, idx) => {
+                    if (!row || !row.name) return;
+                    const modelName = (row.name || '').trim();
+                    const gsName = (row['game system'] || '').trim();
+                    const rawArmyNames = (row.army || '').split(',').map(n => n.trim()).filter(n => n.length > 0);
+                    if (!gsName || rawArmyNames.length === 0) return;
+
+                    const matchingModels = models.filter(m => m.name.trim().toLowerCase() === modelName.toLowerCase());
+
+                    const existingGameSystem = allGameSystems.find(gs => normalize(gs.name) === normalize(gsName));
+                    const existingGameSystemName = existingGameSystem ? existingGameSystem.name : undefined;
+
+                    // build army lookup for this game system if exists
+                    const armyLookup = new Map<string,string>();
+                    if (existingGameSystem) {
+                        allArmies.filter(a => a.gameSystemId === existingGameSystem.id).forEach(a => armyLookup.set(normalize(a.name), a.name));
+                    }
+
+                    const existingArmies: string[] = [];
+                    const missingArmies: string[] = [];
+
+                    rawArmyNames.forEach(an => {
+                        const key = normalize(an);
+                        const found = armyLookup.get(key);
+                        if (found) existingArmies.push(found);
+                        else missingArmies.push(an);
+                    });
+
+                    preview.push({
+                        rowIndex: idx,
+                        name: modelName,
+                        gameSystemName: gsName,
+                        matchingModelIds: matchingModels.map(m => m.id),
+                        matchingModelNames: matchingModels.map(m => m.name),
+                        existingGameSystem: existingGameSystemName,
+                        missingGameSystem: !existingGameSystem,
+                        existingArmies,
+                        missingArmies,
+                    });
+                });
+
+                setRepairPreviewRows(preview);
+                setShowRepairPreviewModal(true);
+            },
+            error: (err) => {
+                addToast(`Preview CSV parse failed: ${err.message}`, 'error');
+            }
+        });
+    };
+
     const duplicates = validationResults.filter(r => r.status === 'DUPLICATE');
     const errorsInReview = validationResults.filter(r => r.status === 'ERROR');
     const paintDuplicates = paintValidationResults.filter(r => r.status === 'DUPLICATE');
@@ -476,6 +782,41 @@ const BulkDataPage: React.FC = () => {
 
     return (
         <div className="container mx-auto space-y-8">
+            {/* Repair Preview Modal */}
+            {showRepairPreviewModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-3xl border border-border max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-white">Repair Preview</h3>
+                            <button onClick={() => setShowRepairPreviewModal(false)} className="text-gray-400 hover:text-white"><XIcon /></button>
+                        </div>
+                        <p className="text-text-secondary mb-4">This preview shows which models match rows in the CSV and which game systems / armies would be created if you run the repair.</p>
+                        <div className="space-y-3">
+                            {repairPreviewRows.length === 0 && <p className="text-text-secondary">No matching rows found in the uploaded CSV.</p>}
+                            {repairPreviewRows.map(r => (
+                                <div key={`${r.rowIndex}-${r.name}`} className="p-3 bg-background rounded-md border border-border">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold text-white">{r.name}</p>
+                                            <p className="text-sm text-text-secondary">CSV game system: <span className="font-medium text-text-primary">{r.gameSystemName}</span></p>
+                                            <p className="text-sm text-text-secondary">CSV armies: <span className="font-medium text-text-primary">{[...r.existingArmies, ...r.missingArmies].join(', ')}</span></p>
+                                        </div>
+                                        <div className="text-right text-sm">
+                                            <p className="text-text-secondary">Matching models: {r.matchingModelNames.length}</p>
+                                            <p className="text-text-secondary">Game system: {r.existingGameSystem ? <span className="text-green-400">found</span> : <span className="text-yellow-300">will create</span>}</p>
+                                            <p className="text-text-secondary">Armies: {r.missingArmies.length === 0 ? <span className="text-green-400">all found</span> : <span className="text-yellow-300">{r.missingArmies.length} will be created</span>}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-4 flex justify-end gap-3">
+                            <button onClick={() => setShowRepairPreviewModal(false)} className="px-4 py-2 bg-gray-600 text-white rounded-lg">Close</button>
+                            <button onClick={() => { setShowRepairPreviewModal(false); handleRepairFromCsv(); }} className="px-4 py-2 bg-primary text-white rounded-lg">Run Repair</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <h1 className="text-3xl font-bold text-white mb-6">Bulk Data Management</h1>
             {/* Model Import Card */}
             <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
@@ -546,6 +887,77 @@ const BulkDataPage: React.FC = () => {
                     <p className="text-text-secondary mt-4">Selected file: {selectedPaintFile.name}</p>
                 )}
             </div>
+
+            {/* In-place Repair Card */}
+            <div className="bg-surface p-6 rounded-lg shadow-md border border-border">
+                <h2 className="text-2xl font-semibold text-white mb-4">Repair mappings from CSV (non-destructive)</h2>
+                <div className="text-text-secondary mb-4 space-y-2">
+                    <p>
+                        Upload the CSV you originally imported. The preview step will show which models will be updated and which game systems/armies will be created. A backup is stored on the page (window._tmc_backup) before any changes are made.
+                    </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    <input
+                        id="repair-csv-file-input"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleRepairFileChange}
+                        className="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-indigo-500"
+                    />
+                    <button
+                        onClick={handlePreviewFromCsv}
+                        disabled={!repairFile}
+                        className="w-full sm:w-auto px-6 py-2 bg-yellow-600 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Preview Repair
+                    </button>
+                    <button
+                        onClick={handleRepairFromCsv}
+                        disabled={!repairFile || isRepairing}
+                        className="w-full sm:w-auto px-6 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isRepairing ? 'Repairing...' : 'Run Repair (non-destructive)'}
+                    </button>
+                </div>
+                {repairFile && (
+                    <p className="text-text-secondary mt-4">Selected file: {repairFile.name}</p>
+                )}
+                <div className="mt-4 flex items-center gap-3">
+                    <button onClick={() => { loadAvailableBackups(); setShowRestoreModal(true); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Manage Backups</button>
+                    <span className="text-text-secondary text-sm">Backups are stored automatically before any repair and persist across reloads.</span>
+                </div>
+            </div>
+
+            {/* Restore Backup Modal */}
+            {showRestoreModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+                    <div className="bg-surface rounded-lg shadow-xl p-6 w-full max-w-2xl border border-border max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-white">Restore Backups</h3>
+                            <button onClick={() => setShowRestoreModal(false)} className="text-gray-400 hover:text-white"><XIcon /></button>
+                        </div>
+                        <p className="text-text-secondary mb-4">Select a timestamped backup to restore data into the app. Restoring will overwrite current data files and then reload the page.</p>
+                        {availableBackups.length === 0 && <p className="text-text-secondary">No backups found.</p>}
+                        <div className="space-y-3">
+                            {availableBackups.map(b => (
+                                <div key={b.key} className="flex items-center justify-between p-3 bg-background rounded-md border border-border">
+                                    <div>
+                                        <p className="font-semibold text-white">{b.createdAt}</p>
+                                        <p className="text-sm text-text-secondary">Systems: {b.systems} • Armies: {b.armies} • Models: {b.models} • Paints: {b.paints}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => { setSelectedBackupKey(b.key); restoreBackup(b.key); }} disabled={restoreInProgress} className="px-3 py-1 bg-green-600 text-white rounded-md">Restore</button>
+                                        <button onClick={() => deleteBackup(b.key)} className="px-3 py-1 bg-red-600 text-white rounded-md">Delete</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                            <button onClick={() => setShowRestoreModal(false)} className="px-4 py-2 bg-gray-600 text-white rounded-lg">Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Model Review Modal */}
             {showReviewModal && (

@@ -32,7 +32,7 @@ const PaintEditModal: React.FC<{
         onClose();
     };
 
-    const paintTypes: Paint['paintType'][] = ['Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air'];
+    const paintTypes: Paint['paintType'][] = ['Primer', 'Wash', 'Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air', 'Metallic'];
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
@@ -168,7 +168,7 @@ const PaintsPage: React.FC = () => {
 
     const uniqueManufacturers = useMemo(() => [...new Set(paints.map(p => p.manufacturer).sort())], [paints]);
     const uniqueColorSchemes = useMemo(() => [...new Set(paints.map(p => p.colorScheme).sort())], [paints]);
-    const paintTypes: Paint['paintType'][] = ['Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air'];
+    const paintTypes: Paint['paintType'][] = ['Primer', 'Wash', 'Base', 'Layer', 'Shade', 'Contrast', 'Technical', 'Dry', 'Air', 'Metallic'];
 
     const sortedAndFilteredPaints = useMemo(() => {
         const filtered = paints

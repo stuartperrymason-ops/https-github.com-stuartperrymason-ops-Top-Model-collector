@@ -179,21 +179,7 @@ const DashboardPage: React.FC = () => {
                 </button>
             </div>
 
-            {/* Low Stock Alerts Card */}
-            {lowStockPaints.length > 0 && (
-                <div className="mb-8 bg-yellow-900/50 border border-yellow-600 p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-semibold text-yellow-300 mb-4">Low Stock Alerts</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {lowStockPaints.map(paint => (
-                            <div key={paint.id} className="bg-surface p-3 rounded-md">
-                                <p className="font-bold text-white truncate" title={paint.name}>{paint.name}</p>
-                                <p className="text-sm text-text-secondary">{paint.manufacturer}</p>
-                                <p className="text-lg font-bold text-red-500 mt-1">Stock: {paint.stock}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+            {/* Low Stock Alerts Card (moved to bottom of page) */}
 
             {/* Conditionally render the dashboard content only if there are models to display. */}
             {models.length > 0 ? (
@@ -290,6 +276,22 @@ const DashboardPage: React.FC = () => {
                             : "Try adjusting or resetting your filters to see your stats."
                         }
                     </p>
+                </div>
+            )}
+
+            {/* Low Stock Alerts Card (moved to bottom of page) */}
+            {lowStockPaints.length > 0 && (
+                <div className="mt-8 mb-12 bg-yellow-900/50 border border-yellow-600 p-6 rounded-lg shadow-md">
+                    <h2 className="text-xl font-semibold text-yellow-300 mb-4">Low Stock Alerts</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {lowStockPaints.map(paint => (
+                            <div key={paint.id} className="bg-surface p-3 rounded-md">
+                                <p className="font-bold text-white truncate" title={paint.name}>{paint.name}</p>
+                                <p className="text-sm text-text-secondary">{paint.manufacturer}</p>
+                                <p className="text-lg font-bold text-red-500 mt-1">Stock: {paint.stock}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
