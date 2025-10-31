@@ -25,8 +25,8 @@ These diagrams reflect the current implementation: frontend-only app that persis
 ```mermaid
 graph TD
     subgraph Frontend (Browser)
-        A[UI Components(Pages & Modals)] -->|calls| B[DataContext (global state)]
-        B -->|uses| C[apiService.ts (localStorage wrapper)]
+        A[UI Components-Pages & Modals] -->|calls| B[DataContext -global state]
+        B -->|uses| C[apiService.ts -localStorage wrapper]
         C -->|reads/writes| D[localStorage JSON keys]
         B -->|re-renders| A
     end
