@@ -1,3 +1,30 @@
+param(
+    [int]$Port = 5000,
+    [switch]$ForceBuild
+)
+
+# Serve the production build (dist) locally. If dist does not exist or --ForceBuild is specified, build first.
+Write-Host "serve-dist.ps1 starting..."
+$cwd = Split-Path -Parent $MyInvocation.MyCommand.Definition
+Set-Location $cwd
+
+if ($ForceBuild.IsPresent) {
+    Write-Host "--ForceBuild specified: running build..."
+    npm run build
+    if ($LASTEXITCODE -ne 0) { Write-Error "Build failed. Exiting."; exit $LASTEXITCODE }
+}
+
+if (-not (Test-Path -Path "./dist")) {
+    Write-Host "Production build (./dist) not found. Running npm run build..."
+    npm run build
+    if ($LASTEXITCODE -ne 0) { Write-Error "Build failed. Exiting."; exit $LASTEXITCODE }
+}
+
+Write-Host "Serving ./dist on http://localhost:$Port"
+Write-Host "Use Ctrl+C to stop the server."
+
+# Use the project's http-server dependency (installed) via npx for portability
+& npx http-server dist -p $Port
 <#
 Serves the production `dist` folder locally using `npx serve`.
 
