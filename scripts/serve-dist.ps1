@@ -1,7 +1,8 @@
 param(
     [Parameter(Position=0)]
     [int]$Port = 5000,
-    [switch]$ForceBuild
+    [switch]$ForceBuild,
+    [switch]$OpenBrowser
 )
 
 try {
@@ -28,7 +29,9 @@ try {
         Write-Error "Node serve script not found: $nodeScript"
         exit 1
     }
-    & node $nodeScript $Port
+    $nodeArgs = @($Port)
+    if ($OpenBrowser.IsPresent) { $nodeArgs += '--open' }
+    & node $nodeScript $nodeArgs
 
 } catch {
     Write-Error "Error: $_"

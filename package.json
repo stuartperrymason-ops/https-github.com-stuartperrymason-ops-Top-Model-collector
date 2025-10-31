@@ -9,7 +9,8 @@
   "build": "tsc && vite build",
   "preview": "vite preview",
   "serve-dist": "node ./scripts/serve-dist-node.js 5000",
-  "serve-dist:win": "powershell -ExecutionPolicy Bypass -File ./scripts/serve-dist.ps1 -Port 5000"
+  "serve-dist:win": "powershell -ExecutionPolicy Bypass -File ./scripts/serve-dist.ps1 -Port 5000",
+  "serve-dist:build": "npm run build && npm run serve-dist"
   },
   "dependencies": {
     "@google/genai": "^1.25.0",
