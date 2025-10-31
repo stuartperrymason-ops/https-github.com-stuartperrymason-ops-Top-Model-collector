@@ -1,0 +1,295 @@
+name,manufacturer,paintType,colorScheme,stock,rgbCode
+Matt Black,Army Painter Fanatic,Base,Black & Greys,3,#000000
+Deep Grey Uniform Grey,Army Painter Fanatic,Layer,Black & Greys,1,#5b5e65
+Uniform Grey,Army Painter Fanatic,Layer,Black & Greys,1,#71747B
+Ash Grey,Army Painter Fanatic,Layer,Black & Greys,1,#8F9093
+Company Grey,Army Painter Fanatic,Layer,Black & Greys,1,#C0C1C5
+Brigade Grey,Army Painter Fanatic,Layer,Black & Greys,1,#D4D5D7
+Night Sky,Army Painter Fanatic,Base,Desaturated Blue-Greys,1,#374757
+Thunderous Blue,Army Painter Fanatic,Layer,Desaturated Blue-Greys,1,#365478
+Stratos Blue,Army Painter Fanatic,Layer,Desaturated Blue-Greys,1,#33628C
+Wold Grey,Army Painter Fanatic,Layer,Desaturated Blue-Greys,1,#5479A4
+Runic Cobalt,Army Painter Fanatic,Layer,Desaturated Blue-Greys,1,#7C95B3
+Frost Blue,Army Painter Fanatic,Layer,Desaturated Blue-Greys,1,#A5C0DD
+Woodland Camo,Army Painter Fanatic,Base,Olive Greens,1,#4F6347
+Army Green,Army Painter Fanatic,Layer,Olive Greens,1,#61784A
+Camoflague Green,Army Painter Fanatic,Layer,Olive Greens,1,#728251
+Olive Drab,Army Painter Fanatic,Layer,Olive Greens,1,#7E9056
+Necrotic Flesh,Army Painter Fanatic,Layer,Olive Greens,1,#A1AC82
+Grotesque Green,Army Painter Fanatic,Layer,Olive Greens,1,#B6C09B
+Triumphant Navy,Army Painter Fanatic,Base,Strong Pale Blues,0,#1b2a53
+Gothic Blue,Army Painter Fanatic,Layer,Strong Pale Blues,0,#29386f
+UltraMarine Blue,Army Painter Fanatic,Layer,Strong Pale Blues,0,#274486
+Alpha Blue,Army Painter Fanatic,Layer,Strong Pale Blues,0,#6979b5
+Baron Blue,Army Painter Fanatic,Layer,Strong Pale Blues,0,#8697cd
+Angur Blue,Army Painter Fanatic,Layer,Strong Pale Blues,0,#b0c2ea
+Imperial Navy,Army Painter Fanatic,Base,Vivid Blues,0,#003261
+Regal Blue,Army Painter Fanatic,Layer,Vivid Blues,0,#004a83
+Royal Blue,Army Painter Fanatic,Layer,Vivid Blues,0,#0055a8
+Crystal Blue,Army Painter Fanatic,Layer,Vivid Blues,0,#006dbf
+Arctic Gem,Army Painter Fanatic,Layer,Vivid Blues,0,#008ece
+Bright Sapphire,Army Painter Fanatic,Layer,Vivid Blues,0,#93ccea
+Deep Ocean Blue,Army Painter Fanatic,Base,Deep Green Blues,0,#213341
+Abyssal Blue,Army Painter Fanatic,Layer,Deep Green Blues,0,#00506b
+Tidal Blue,Army Painter Fanatic,Layer,Deep Green Blues,0,#006a94
+Phalanx Blue,Army Painter Fanatic,Layer,Deep Green Blues,0,#0086ac
+Shieldwall Blue,Army Painter Fanatic,Layer,Deep Green Blues,0,#009ec5
+Aegis Aqua,Army Painter Fanatic,Layer,Deep Green Blues,0,#3fadd0
+Deep Azure,Army Painter Fanatic,Base,Turquoises,2,#016877
+Hydra Turqouise,Army Painter Fanatic,Layer,Turquoises,2,#018c93
+Turqouise Siren,Army Painter Fanatic,Layer,Turquoises,2,#25a9ae
+Aquamarine,Army Painter Fanatic,Layer,Turquoises,2,#59bec6
+Neptune Glow,Army Painter Fanatic,Layer,Turquoises,2,#7dccd1
+Marine Mist,Army Painter Fanatic,Layer,Turquoises,2,#9cd4d1
+Scarab Green,Army Painter Fanatic,Base,Teals,0,#1e3b41
+Temple Gate Teal,Army Painter Fanatic,Layer,Teals,0,#005c4d
+Pharoah Guard,Army Painter Fanatic,Layer,Teals,0,#00755a
+Talisman Teal,Army Painter Fanatic,Layer,Teals,0,#00a585
+Aqua Alchemy,Army Painter Fanatic,Layer,Teals,0,#21b59b
+Amulet Aqua,Army Painter Fanatic,Layer,Teals,0,#57cdb5
+Bold Titanium White,Pro Acryl,Base,White,1,#ffffff
+Coal Black,Pro Acryl,Base,Black & Greys,1,#262626
+Bold Pyrole red,Pro Acryl,Base,Reds,1,#cf1f30
+Green,Pro Acryl,Base,Greens,1,#088349
+Blue,Pro Acryl,Base,Blues,1,#155fac
+Golden Yellow,Pro Acryl,Base,Yellows,1,#f9d905
+Orange,Pro Acryl,Base,Reds,1,#f3792a
+Burnt Red,Pro Acryl,Base,Reds,1,#803534
+Mahogany,Pro Acryl,Base,Browns,1,#4e3c39
+Purple,Pro Acryl,Base,Purples,1,#81507e
+Magenta,Pro Acryl,Base,Purples,1,#c04c73
+Sky Blue,Pro Acryl,Base,Blues,1,#2aa0da
+Faded Ultramarine,Pro Acryl,Base,Blues,1,#6389c5
+Dark Grey Blue,Pro Acryl,Base,Blues,1,#153a5f
+Bright Warm Grey,Pro Acryl,Base,Black & Greys,1,#aeb5a3
+Dark Warm Grey,Pro Acryl,Base,Black & Greys,1,#4b4f52
+Golden Brown,Pro Acryl,Base,Browns,1,#d5ad70
+Light Umber,Pro Acryl,Base,Browns,1,#6f564a
+Dark Umber,Pro Acryl,Base,Browns,1,#53413c
+Camo Green,Pro Acryl,Base,Greens,1,#4f604a
+Jade,Pro Acryl,Base,Greens,1,#0a6061
+Bright Ivory,Pro Acryl,Base,White,1,#faf9e3
+Ivory,Pro Acryl,Base,White,1,#e7dccb
+Tan Flesh,Pro Acryl,Base,Flesh,1,#e0b5a6
+Dark Blue,Pro Acryl,Base,Blues,1,#131f46
+Dark Purple,Pro Acryl,Base,Purples,1,#241f49
+Dark Camo Green,Pro Acryl,Base,Greens,1,#515347
+Burnt Orange,Pro Acryl,Base,Reds,1,#9e463d
+Yellow Ochre,Pro Acryl,Base,Yellows,1,#d09d4a
+Bright Yellow Green,Pro Acryl,Base,Yellows,1,#98bd39
+Black Brown,Pro Acryl,Base,Black & Greys,1,#484441
+Olive Flesh,Pro Acryl,Base,Flesh,1,#c7b49d
+Shadown Flesh,Pro Acryl,Base,Flesh,1,#a1635a
+Pale Pink,Pro Acryl,Base,Pink,1,#fbd9d7
+Dark Neutral Grey,Pro Acryl,Base,Black & Greys,1,#414848
+Bright Neutral Grey,Pro Acryl,Base,Black & Greys,1,#dadada
+Torquoise,Pro Acryl,Base,Blues,1,#13a2b2
+Grey Blue,Pro Acryl,Base,Blues,1,#7da1be
+Blue Black,Pro Acryl,Base,Black & Greys,1,#3f4750
+Black green,Pro Acryl,Base,Black & Greys,1,#37413c
+Bright pale green,Pro Acryl,Base,Greens,1,#bbe0cf
+Burnt Sienna,Pro Acryl,Base,Browns,2,#753324
+Pale Yellow,Pro Acryl,Base,Yellows,1,#fdf1b1
+Dark Golden Brown,Pro Acryl,Base,Browns,1,#5d481d
+Faded Plum,Pro Acryl,Base,Purples,1,#a18cb6
+Khaki,Pro Acryl,Base,Browns,1,#d2c69c
+Yellow Green,Pro Acryl,Base,greens,1,#6d7746
+Faded Green,Pro Acryl,Base,Greens,1,#97a991
+Bright Jade,Pro Acryl,Base,Greens,1,#3aa08a
+Dark Flesh,Pro Acryl,Base,FLesh,1,#623e38
+Burgundy,Pro Acryl,Base,Reds,1,#77313d
+Plum,Pro Acryl,Base,Purples,1,#8c508d
+Pink,Pro Acryl,Base,pink,1,#f2a0ae
+Warm Yellow,Pro Acryl,Base,Yellows,1,#ffc10f
+Warm Flesh,Pro Acryl,Base,Flesh,1,#fecc84
+Warm Grey,Pro Acryl,Base,Black & Greys,1,#616769
+Neutral Grey,Pro Acryl,Base,Black & Greys,1,#5a5f66
+Silver,Pro Acryl,Metallic,Metals,1,#939896
+Light Bronze,Pro Acryl,Metallic,Metals,1,#9f8f72
+Copper,Pro Acryl,Metallic,Metals,1,#945a36
+Rich Gold,Pro Acryl,Metallic,Metals,1,#aa7639
+White Gold,Pro Acryl,Metallic,Metals,1,#9e9684
+Dark Silver,Pro Acryl,Metallic,Metals,1,#4a4d4f
+Bright Gold,Pro Acryl,Metallic,Metals,1,#c89c64
+Bronze ,Pro Acryl,Metallic,Metals,1,#604c33
+Metallic Medium,Pro Acryl,Metallic,Metals,1,#9ba5a0
+White Scar,Citadel Colour,Primer,Primers,0,#ffffff
+Chaos Black ,Citadel Colour,Primer,Primers,0,#000000
+Mechanicus Standard Grey,Citadel Colour,Primer,Primers,1,#39484a
+Grey Seer,Citadel Colour,Primer,Primers,0,#a2a5a7
+Wraithbone,Citadel Colour,Primer,Primers,0,#dbd1b2
+Zandri Dust,Citadel Colour,Primer,Primers,0,#988e56
+Deathguard Green,Citadel Colour,Primer,Primers,0,#556229
+Mephiston Red,Citadel Colour,Primer,Primers,0,#960c09
+Macrage Blue,Citadel Colour,Primer,Primers,0,#0f3d7c
+LEadBelcher,Citadel Colour,Primer,Primers,0,#8d8d8d
+Retributor Armour,Citadel Colour,Primer,Primers,1,#d4a249
+Abaddon Black,Citadel Colour,Base,Blacks & Greys,0,#000000
+Corvus Black,Citadel Colour,Base,Blacks & Greys,0,#171314
+Corax White,Citadel Colour,Base,Whites,0,#ffffff
+Grey Seer,Citadel Colour,Base,Blacks & Greys,0,#a2a5a7
+Celstray Grey,Citadel Colour,Base,Blacks & Greys,0,#8ba3a3
+Death Korps Drab,Citadel Colour,Base,Greens,0,#3d4539
+Mechanicus Standard Grey,Citadel Colour,Base,Blacks & Greys,0,#39484a
+The Fang,Citadel Colour,Base,Blues,0,#405b71
+White Scar,Citadel Colour,Layer,Blacks & Greys,0,#ffffff
+Ulthan Grey,Citadel Colour,Layer,Blacks & Greys,0,#c4ddd5
+Administratum Grey,Citadel Colour,Layer,Blacks & Greys,0,#989c94
+Dawnstone,Citadel Colour,Layer,Blacks & Greys,0,#697068
+Eshin Grey,Citadel Colour,Layer,Blacks & Greys,0,#484b4e
+Slaneesh Grey,Citadel Colour,Layer,Blacks & Greys,0,#8b8893
+Warpfiend Grey,Citadel Colour,Layer,Blacks & Greys,0,#66656e
+Stormvermin Fur,Citadel Colour,Layer,Blacks & Greys,0,#6d655f
+Skavenblight Dinge,Citadel Colour,Layer,Blacks & Greys,0,#45413b
+Fenrisian Grey,Citadel Colour,Layer,Blacks & Greys,0,#6d94b3
+Russ Grey,Citadel Colour,Layer,Blacks & Greys,0,#507085
+Dark Reaper,Citadel Colour,Layer,Blacks & Greys,0,#354d4c
+Nuln Oil,Citadel Colour,Wash,Blacks & Greys,1,#3b3a39
+Soulbright Grey,Citadel Colour,Wash,Blacks & Greys,0,#b8b3b5
+Targor Rageshade,Citadel Colour,Wash,Blacks & Greys,0,#847485
+Mephiston Red,Citadel Colour,Base,Reds,0,#960c09
+Khorne Red,Citadel Colour,Base,Reds,0,#650001
+Gal Vorbak Red,Citadel Colour,Base,Reds,0,#4b213c
+Wild Rider Red,Citadel Colour,Layer,Reds,0,#e82e1b
+Evil Sunz Scarlet,Citadel Colour,Layer,Reds,0,#c01411
+Wazdakka Red,Citadel Colour,Layer,Reds,0,#880804
+Wordbearer red,Citadel Colour,Layer,Reds,0,#620104
+Bezerkers Bloodshade,Citadel Colour,Wash,Reds,0,#ba1346
+Carroburg Crimson,Citadel Colour,Wash,Reds,1,#53252d
+Jokero Orange,Citadel Colour,Base,Oranges,0,#ed3814
+Trollslayer Orange,Citadel Colour,Layer,Oranges,0,#f16c23
+Fire Dragon Bright ,Citadel Colour,Layer,Oranges,0,#f4874e
+Lugganth Ornage,Citadel Colour,Layer,Oranges,0,#f69b82
+Squig Orange,Citadel Colour,Layer,Oranges,0,#a74d42
+Fuegan Orange,Citadel Colour,Wash,Oranges,0,#ad653c
+Averland Sunset,Citadel Colour,Base,Yellows,0,#fbb81c
+Yriel Yellow,Citadel Colour,Layer,Yellows,0,#ffd900
+Flash Gits Yellow,Citadel Colour,Layer,Yellows,0,#fff300
+Phalanx Yellow,Citadel Colour,Layer,Yellows,0,#ffe200
+Dorn Yellow,Citadel Colour,Layer,Yellows,0,#fff55a
+Casanra Yellow,Citadel Colour,Wash,Yellows,0,#f1b576
+Mortarion Grime,Citadel Colour,Wash,Yellows,0,#c6be69
+Orruk Flesh,Citadel Colour,Base,Greens,0,#8cc276
+Deathguard Green,Citadel Colour,Base,Greens,0,#6d774d
+Deathworld Forest,Citadel Colour,Base,Greens,0,#556229
+Castellan Green,Citadel Colour,Base,Greens,0,#264715
+Caliban Green,Citadel Colour,Base,Greens,0,#003d15
+Waagh Flesh,Citadel Colour,Base,Greens,0,#0b3b36
+Stegadon Scale Green,Citadel Colour,Base,Greens,0,#06455d
+Incubi Darkness,Citadel Colour,Base,Greens,0,#082e32
+Lupercal Green,Citadel Colour,Base,Greens,0,#002c2b
+Nocturne Green,Citadel Colour,Base,Greens,0,#162a29
+Moot Green,Citadel Colour,Layer,Greens,0,#3daf44
+Warboss Green,Citadel Colour,Layer,Greens,0,#317e57
+Warpstone Glow,Citadel Colour,Layer,Greens,0,#0f702a
+Vulkan Green,Citadel Colour,Layer,Greens,0,#223c2e
+Nurgling Green,Citadel Colour,Layer,Greens,0,#7e975e
+Ogryn Camo,Citadel Colour,Layer,Greens,0,#96a648
+Elysian Green,Citadel Colour,Layer,Greens,0,#6b8c37
+Straken Green,Citadel Colour,Layer,Greens,0,#597f1c
+Loken Forest,Citadel Colour,Layer,Greens,0,#486c25
+Gaus Blaster Green,Citadel Colour,Layer,Greens,0,#7fc1a5
+Skarsnick Green,Citadel Colour,Layer,Greens,0,#588f6b
+Sybaraite Green,Citadel Colour,Layer,Greens,0,#17a166
+Kabalite Green,Citadel Colour,Layer,Greens,0,#008962
+Sotek Green,Citadel Colour,Layer,Greens,0,#0b6371
+Sons of Horus Green,Citadel Colour,Layer,Greens,0,#00545e
+Biel-tan green,Citadel Colour,Wash,Greens,0,#4f7153
+Athonian Camo shade,Citadel Colour,Wash,Greens,0,#494933
+Coelia Grenshade,Citadel Colour,Wash,Greens,0,#176a63
+Kroak Green,Citadel Colour,Wash,Greens,0,#94c5a2
+Poxwalker,Citadel Colour,Wash,Greens,0,#57989c
+Caledor Sky,Citadel Colour,Base,Blues,0,#366699
+Macrage Blue,Citadel Colour,Base,Blues,0,#0f3d7c
+Kantor Blue,Citadel Colour,Base,Blues,0,#02134e
+Thusand Sons blue,Citadel Colour,Base,Blues,0,#00506f
+Night lords blue,Citadel Colour,Base,Blues,0,#002b5c
+Lothern Blue,Citadel Colour,Layer,Blues,0,#2c9bcc
+Teclis Blue,Citadel Colour,Layer,Blues,0,#3877bf
+Hoeth Blue,Citadel Colour,Layer,Blues,0,#4c78af
+Aldorf Guard Blue,Citadel Colour,Layer,Blues,0,#2d4696
+Calgar Blue,Citadel Colour,Layer,Blues,0,#2a497f
+Alatoc Blue,Citadel Colour,Layer,Blues,0,#2f4f85
+Baharroth Blue,Citadel Colour,Layer,Blues,0,#54bdca
+Temple Guard Blue,Citadel Colour,Layer,Blues,0,#239489
+Ahriman Blue,Citadel Colour,Layer,Blues,0,#00708a
+Thunderhawk Blue,Citadel Colour,Layer,Blues,0,#396a70
+Blue Horror,Citadel Colour,Layer,Blues,0,#9eb5ce
+Tyran Blue,Citadel Colour,Wash,Blues,0,#2d94cb
+Drakenhoff Nightshade,Citadel Colour,Wash,Blues,0,#313841
+Daemonette Hide,Citadel Colour,Base,Purples,0,#655f81
+Naggaroth Night,Citadel Colour,Base,Purples,0,#3b2b50
+Phoenician Purple,Citadel Colour,Base,Purples,0,#440052
+Barak-Nur Burgundy,Citadel Colour,Base,Purples,0,#451636
+Dechala Lilac,Citadel Colour,Layer,Purples,0,#b598c9
+Kakophoni Purple,Citadel Colour,Layer,Purples,0,#8869ae
+Genestealer Purple,Citadel Colour,Layer,Purples,0,#7658a5
+Xereus Purple,Citadel Colour,Layer,Purples,0,#47125a
+Druchi Violet,Citadel Colour,Wash,Purples,0,#503053
+Screamer Pink,Citadel Colour,Base,Pinks,0,#7a0e44
+Fulgrim Pink,Citadel Colour,Base,Pinks,0,#f3abca
+Eperors Children,Citadel Colour,Base,Pinks,0,#b74073
+Pink Horror,Citadel Colour,Base,Pinks,0,#8e2757
+Wraithbone,Citadel Colour,Base,Bone,0,#dbd1b2
+Morghast Bone,Citadel Colour,Base,Bone,0,#c0a973
+Zandri Dust,Citadel Colour,Base,Bone,0,#988e56
+Screaming Skull,Citadel Colour,Layer,Bone,0,#b9c099
+Krieg Khaki,Citadel Colour,Layer,Bone,0,#bcbb7e
+Ushbani Bone,Citadel Colour,Layer,Bone,0,#aba173
+Karak Stone,Citadel Colour,Layer,Bone,0,#b7945c
+Ratkin Flesh,Citadel Colour,Base,Flesh,0,#a86648
+Bugmans Glow,Citadel Colour,Base,Flesh,0,#804c43
+Catchan Flesh,Citadel Colour,Base,Flesh,0,#442b25
+Ionrach Skin,Citadel Colour,Base,Flesh,0,#97a384
+Rakarth Flesh,Citadel Colour,Base,Flesh,0,#9c998d
+Flayed one Flesh,Citadel Colour,Layer,Flesh,0,#eec483
+Ungor Flesh,Citadel Colour,Layer,Flesh,0,#d1a560
+Kislev flesh,Citadel Colour,Layer,Flesh,0,#d1a570
+Bestgor Flesh,Citadel Colour,Layer,Flesh,0,#d08951
+Cadian Fleshtone,Citadel Colour,Layer,Flesh,0,#c47652
+Knight-Questor Flesh,Citadel Colour,Layer,Flesh,0,#996563
+Bloodreaver Flesh,Citadel Colour,Layer,Flesh,0,#6a4848
+Pallid Wych Flesh,Citadel Colour,Layer,Flesh,0,#caccbb
+Deepkin flesh,Citadel Colour,Layer,Flesh,0,#a9b79f
+Reikland Fleshade,Citadel Colour,Wash,Flesh,2,#533825
+Hongrot hide,Citadel Colour,Base,Browns,0,#a1812a
+XV-88,Citadel Colour,Base,Browns,0,#6c4811
+Thondia Brown,Citadel Colour,Base,Browns,0,#54302a
+Mournfang Brown,Citadel Colour,Base,Browns,0,#490f06
+Rhinox Hide,Citadel Colour,Base,Browns,0,#462f30
+Steel Legion Drab,Citadel Colour,Base,Browns,0,#584e2d
+Dryad Bark,Citadel Colour,Base,Browns,0,#2b2a24
+Zamasi Desert,Citadel Colour,Layer,Browns,0,#d89d1b
+Tallarn Sand,Citadel Colour,Layer,Browns,0,#a07409
+Tau Light Ochre,Citadel Colour,Layer,Browns,0,#bc6b10
+Balor Brown,Citadel Colour,Layer,Browns,0,#875408
+Skag Brown,Citadel Colour,Layer,Browns,0,#8b4806
+Tuskgor Fur,Citadel Colour,Layer,Browns,0,#863231
+Doombull Brown,Citadel Colour,Layer,Browns,0,#570003
+Deathclaw Brown,Citadel Colour,Layer,Browns,0,#af634f
+Gorthor Brown,Citadel Colour,Layer,Browns,0,#5f463f
+Baneblade brown,Citadel Colour,Layer,Browns,0,#5f463f
+Agrax Earthshade,Citadel Colour,Wash,Browns,0,#564537
+Seraphim Sepia,Citadel Colour,Wash,Browns,0,#4d371b
+Screaming bell,Citadel Colour,Base,Metals,0,#9b593b
+Runelord Brass,Citadel Colour,Base,Metals,0,#5c4c3a
+Warplock Bronze,Citadel Colour,Base,Metals,0,#88442f
+Grey Knight Steel,Citadel Colour,Base,Metals,0,#7f8f99
+Iron hand steel,Citadel Colour,Base,Metals,0,#8d847d
+LeadBelcher,Citadel Colour,Base,Metals,0,#646769
+Iron Warriors,Citadel Colour,Base,Metals,0,#565350
+Retributor Armour,Citadel Colour,Base,Metals,1,#bc8a3b
+Balthasar Gold,Citadel Colour,Base,Metals,0,#6c4731
+Canoptek alloy,Citadel Colour,Base,Metals,2,#b69d97
+Skullcrusher brass,Citadel Colour,Layer,Metals,0,#dfac5a
+Bras Scorpion,Citadel Colour,Layer,Metals,0,#743115
+Sycorax Bronze,Citadel Colour,Layer,Metals,1,#98765f
+Castellax Bronze,Citadel Colour,Layer,Metals,0,#934f29
+Hashut Copper,Citadel Colour,Layer,Metals,0,#966644
+Fulgurit Copper,Citadel Colour,Layer,Metals,0,#aa6330
+Stormhost Silver,Citadel Colour,Layer,Metals,0,#c3c7c9
+Runefang Steel,Citadel Colour,Layer,Metals,0,#a5acb0
+Ironbreaker,Citadel Colour,Layer,Metals,0,#646a6b
+Auric Armour Gold,Citadel Colour,Layer,Metals,0,#e39a36
+Liberator Gold,Citadel Colour,Layer,Metals,0,#c39957
+Gehennas Gold,Citadel Colour,Layer,Metals,0,#a1480f
